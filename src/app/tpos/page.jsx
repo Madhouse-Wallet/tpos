@@ -6,11 +6,15 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import PaymentPopup from "@/components/modals/paymentPopup";
 import HistoryPopup from "@/components/modals/HistoryPopup";
-
+import Lottie from "lottie-react";
+import animationData from "./taptoPay.json";
+import LottieComponent from "./TaptoPayanimation";
 const Tpos = () => {
   const [amount, setAmount] = useState("");
+  const [tab, setTab] = useState(0);
   const [paymentPop, setPaymentPop] = useState("");
   const [historyPop, setHistoryPop] = useState("");
+  const [showLoader, setShowLoader] = useState(false);
   const handleClick = (digit) => {
     // Prevent more than 9 digits
     if (amount.length >= 9) return;
@@ -32,6 +36,24 @@ const Tpos = () => {
   const handleBackspace = () => {
     setAmount((prev) => prev.slice(0, -1));
   };
+  const tabData = [
+    { title: "Qr Code to Pay", component: "" },
+    { title: "Tap to Pay", component: "" },
+  ];
+  const handleTab = (key) => {
+    setTab(key);
+  };
+
+  const handleOkClick = () => {
+    if (tab === 0) {
+      setPaymentPop(true);
+    } else {
+      setShowLoader(true);
+      setTimeout(() => {
+        setShowLoader(false);
+      }, 5000);
+    }
+  };
   return (
     <>
       {paymentPop &&
@@ -50,6 +72,11 @@ const Tpos = () => {
           />,
           document.body
         )}
+      {showLoader && (
+        <div className="fixed bg-black/80 flex items-center justify-center top-0 left-0 h-full w-full z-[9999]">
+          <LottieComponent animation={animationData} />
+        </div>
+      )}
       <section className="h-screen pt-12 pb-5 text-center relative">
         <button
           onClick={() => setHistoryPop(!historyPop)}
@@ -69,25 +96,34 @@ const Tpos = () => {
                 </div>
                 <div className="center w-full  max-w-[450px] mx-auto">
                   <div className="flex items-center justify-center gap-3 mb-2">
-                    <button
-                      onClick={() => setPaymentPop(!paymentPop)}
-                      className="flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl bg-[#ea611d] text-[14px] p-3"
-                    >
-                      Qr Code to Pay
-                    </button>
-                    <button className="flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl bg-[#ea611d] text-[14px] p-3">
+                    {tabData.map((item, key) => (
+                      <button
+                        key={key}
+                        onClick={() => handleTab(key)}
+                        // onClick={() => setPaymentPop(!paymentPop)}
+                        className={`${
+                          tab == key
+                            ? "opacity-100 bg-[#ea611d] text-white"
+                            : "text-black bg-[#ddd]"
+                        } flex items-center  w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl  text-[14px] p-3`}
+                      >
+                        {item.title}
+                      </button>
+                    ))}
+                    {/* <button className="flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl bg-[#ea611d] text-[14px] p-3">
                       Tap to Pay
-                    </button>
+                    </button> */}
                   </div>
                   <div className="">
                     <input
+                      placeholder="Memo"
                       type="text"
                       className="border-[#8c8c8c] bg-[#fff] hover:bg-white/6 text-black flex text-[14px] font-semibold w-full border-px md:border-hpx px-5 py-2 h-12 rounded-full outline-0"
                     />
                   </div>
                 </div>
                 <div className="keyPad w-full grid gap-2 grid-cols-4 grid-rows-4 min-h-[40vh] p-3 max-w-[600px] mx-auto">
-                  {["1", "2", "3", "+", "4", "5", "6"].map((val) => (
+                  {["1", "2", "3", "4", "5", "6"].map((val) => (
                     <button
                       key={val}
                       onClick={() => handleClick(val)}
@@ -99,8 +135,8 @@ const Tpos = () => {
 
                   {/* OK Button */}
                   <button
-                    onClick={() => setPaymentPop(!paymentPop)}
-                    className="row-start-2 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold bg-green-500 items-center justify-center rounded-xl transition duration-[400ms] hover:bg-[#000]"
+                    onClick={handleOkClick}
+                    className="row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold bg-green-500 items-center justify-center rounded-xl transition duration-[400ms] hover:bg-[#000]"
                   >
                     OK
                   </button>
