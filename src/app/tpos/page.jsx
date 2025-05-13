@@ -1,20 +1,79 @@
 "use client";
-import Image from "next/image";
-import React, { useState } from "react";
-import logo from "@/assets/images/logo.png";
-import Link from "next/link";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import PaymentPopup from "@/components/modals/paymentPopup";
 import HistoryPopup from "@/components/modals/HistoryPopup";
-import Lottie from "lottie-react";
 import animationData from "./taptoPay.json";
 import LottieComponent from "./TaptoPayanimation";
+import { useParams, useRouter } from "next/navigation";
+import QRCode from "qrcode";
+import { createTposInvoice } from "../../services/apiService";
+
 const Tpos = () => {
   const [amount, setAmount] = useState("");
+  const [memo, setMemo] = useState("");
   const [tab, setTab] = useState(0);
-  const [paymentPop, setPaymentPop] = useState("");
-  const [historyPop, setHistoryPop] = useState("");
+  const [paymentPop, setPaymentPop] = useState(false);
+  const [historyPop, setHistoryPop] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  const [tpoId, setTpoId] = useState(null);
+  const [invoiceData, setInvoiceData] = useState(null);
+  const [qrCodeImage, setQrCodeImage] = useState("");
+  const [error, setError] = useState("");
+
+  // Get URL parameters
+  const params = useParams();
+  const router = useRouter();
+
+  const [sats, setSats] = useState(null);
+
+  useEffect(() => {
+    async function fetchSats() {
+      try {
+        const res = await fetch(
+          "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+        );
+        const data = await res.json();
+        const btcPriceUsd = data?.bitcoin?.usd;
+        if (!btcPriceUsd) throw new Error("BTC price not found");
+        const usdAmount = formatCurrencyWithoutSign(amount);
+        const calculatedSats = Math.floor(
+          (usdAmount / btcPriceUsd) * 100_000_000
+        );
+        setSats(calculatedSats);
+      } catch (err) {
+        console.error("Error:", err);
+      }
+    }
+
+    fetchSats();
+  }, [amount]);
+
+  useEffect(() => {
+    if (params.tpoId) {
+      setTpoId(params.tpoId);
+    } else if (params.id) {
+      setTpoId(params.id);
+    } else {
+      const url = new URL(window.location.href);
+      const idFromQuery = url.searchParams.get("id");
+      if (idFromQuery) {
+        setTpoId(idFromQuery);
+      }
+    }
+  }, [params]);
+
+  const generateQRCode = async (paymentRequest) => {
+    try {
+      const qr = await QRCode.toDataURL(paymentRequest);
+      setQrCodeImage(qr);
+      setPaymentPop(true);
+    } catch (err) {
+      console.error("QR Code generation failed:", err);
+      setError("Failed to generate QR code");
+    }
+  };
+
   const handleClick = (digit) => {
     // Prevent more than 9 digits
     if (amount.length >= 9) return;
@@ -29,6 +88,13 @@ const Tpos = () => {
     return `$${parseInt(dollars, 10)}.${decimal}`;
   };
 
+  const formatCurrencyWithoutSign = (value) => {
+    const cents = value.padStart(3, "0"); // ensure at least 3 digits
+    const dollars = cents.slice(0, -2);
+    const decimal = cents.slice(-2);
+    return `${parseInt(dollars, 10)}.${decimal}`;
+  };
+
   const handleClear = () => {
     setAmount("");
   };
@@ -36,24 +102,67 @@ const Tpos = () => {
   const handleBackspace = () => {
     setAmount((prev) => prev.slice(0, -1));
   };
+
+  const handleMemoChange = (e) => {
+    setMemo(e.target.value);
+  };
+
   const tabData = [
     { title: "Qr Code to Pay", component: "" },
     { title: "Tap to Pay", component: "" },
   ];
+
   const handleTab = (key) => {
     setTab(key);
   };
 
+  // Function to create invoice and show QR code
+  const createInvoiceAndShowQR = async () => {
+    if (!amount || parseInt(amount) <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
+
+    if (!tpoId) {
+      setError("TPOS ID is missing");
+      return;
+    }
+
+    setError("");
+
+    try {
+      const amountValue = parseInt(amount);
+
+      const response = await createTposInvoice(
+        tpoId,
+        amountValue,
+        memo || "TPOS Madhouse Wallet", // Use memo if provided, otherwise use default text
+        1, // No tip
+        "", // No lightning address
+        {} // No additional details
+      );
+      generateQRCode(response.payment_request);
+      setInvoiceData(response);
+    } catch (err) {
+      console.error("Failed to create invoice:", err);
+      setError(`Failed to create invoice: ${err.message}`);
+    }
+  };
+
+  // Handler for OK button click
   const handleOkClick = () => {
     if (tab === 0) {
-      setPaymentPop(true);
+      // Qr Code to Pay tab
+      createInvoiceAndShowQR();
     } else {
+      // Tap to Pay tab - use original functionality
       setShowLoader(true);
       setTimeout(() => {
         setShowLoader(false);
       }, 5000);
     }
   };
+
   return (
     <>
       {paymentPop &&
@@ -61,6 +170,11 @@ const Tpos = () => {
           <PaymentPopup
             paymentPop={paymentPop}
             setPaymentPop={setPaymentPop}
+            tpoId={tpoId}
+            qrCodeImage={qrCodeImage} // Pass QR code image to popup
+            invoiceData={invoiceData} // Pass invoice data to popup
+            amount={amount} // Pass amount to popup
+            memo={memo} // Pass memo to popup
           />,
           document.body
         )}
@@ -69,6 +183,7 @@ const Tpos = () => {
           <HistoryPopup
             historyPop={historyPop}
             setHistoryPop={setHistoryPop}
+            tpoId={tpoId}
           />,
           document.body
         )}
@@ -92,32 +207,36 @@ const Tpos = () => {
                   <h4 className="m-0 font-semibold text-4xl">
                     {formatCurrency(amount)}
                   </h4>
-                  <p className="mb-0 mt-4 font-medium text-[20px]">22 sat</p>
+                  <p className="mb-0 mt-4 font-medium text-[20px]">
+                    {sats} sat
+                  </p>
+                  {/* {tpoId && (
+                    <p className="text-sm text-gray-500">TPO ID: {tpoId}</p>
+                  )} */}
+                  {error && <p className="text-red-500 mt-2">{error}</p>}
                 </div>
-                <div className="center w-full  max-w-[450px] mx-auto">
+                <div className="center w-full max-w-[450px] mx-auto">
                   <div className="flex items-center justify-center gap-3 mb-2">
                     {tabData.map((item, key) => (
                       <button
                         key={key}
                         onClick={() => handleTab(key)}
-                        // onClick={() => setPaymentPop(!paymentPop)}
                         className={`${
                           tab == key
                             ? "opacity-100 bg-[#ea611d] text-white"
                             : "text-black bg-[#ddd]"
-                        } flex items-center  w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl  text-[14px] p-3`}
+                        } flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl text-[14px] p-3`}
                       >
                         {item.title}
                       </button>
                     ))}
-                    {/* <button className="flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl bg-[#ea611d] text-[14px] p-3">
-                      Tap to Pay
-                    </button> */}
                   </div>
                   <div className="">
                     <input
                       placeholder="Memo"
                       type="text"
+                      value={memo}
+                      onChange={handleMemoChange}
                       className="border-[#8c8c8c] bg-[#fff] hover:bg-white/6 text-black flex text-[14px] font-semibold w-full border-px md:border-hpx px-5 py-2 h-12 rounded-full outline-0"
                     />
                   </div>
@@ -127,7 +246,7 @@ const Tpos = () => {
                     <button
                       key={val}
                       onClick={() => handleClick(val)}
-                      className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-full transition duration-[400ms] hover:bg-[#000] h-[55px]"
+                      className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-[40px] transition duration-[400ms] hover:bg-[#000] min-h-[55px] h-full"
                     >
                       {val}
                     </button>
@@ -145,7 +264,7 @@ const Tpos = () => {
                     <button
                       key={val}
                       onClick={() => handleClick(val)}
-                      className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-full transition duration-[400ms] hover:bg-[#000]"
+                      className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-[40px] transition duration-[400ms] hover:bg-[#000]"
                     >
                       {val}
                     </button>
@@ -154,7 +273,7 @@ const Tpos = () => {
                   {/* Clear Button */}
                   <button
                     onClick={handleClear}
-                    className="flex text-xl text-white font-semibold bg-red-500 items-center justify-center rounded-full transition duration-[400ms] hover:bg-[#000]"
+                    className="flex text-xl text-white font-semibold bg-red-500 items-center justify-center rounded-[40px] transition duration-[400ms] hover:bg-[#000]"
                   >
                     C
                   </button>
@@ -162,7 +281,7 @@ const Tpos = () => {
                   {/* 0 Button */}
                   <button
                     onClick={() => handleClick("0")}
-                    className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-full transition duration-[400ms] hover:bg-[#000]"
+                    className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-[40px] transition duration-[400ms] hover:bg-[#000]"
                   >
                     0
                   </button>
@@ -170,7 +289,7 @@ const Tpos = () => {
                   {/* Backspace Button */}
                   <button
                     onClick={handleBackspace}
-                    className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-full transition duration-[400ms] hover:bg-[#000]"
+                    className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-[40px] transition duration-[400ms] hover:bg-[#000]"
                   >
                     {backIcn}
                   </button>

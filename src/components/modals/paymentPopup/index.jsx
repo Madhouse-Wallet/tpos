@@ -1,15 +1,65 @@
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 
-const PaymentPopup = ({ paymentPop, setPaymentPop }) => {
+const PaymentPopup = ({
+  paymentPop,
+  setPaymentPop,
+  qrCodeImage,
+  tpoId,
+  invoiceData,
+  amount,
+  memo,
+}) => {
+  const [copied, setCopied] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    if (!invoiceData?.payment_hash) return;
+    socketRef.current = new WebSocket(
+      `https://lnbits.madhousewallet.com/api/v1/ws/${invoiceData.payment_hash}`
+    );
+
+    socketRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.status === "paid") {
+        setPaymentSuccess(true);
+
+        setTimeout(() => {
+          setPaymentPop(false);
+        }, 2000);
+      }
+    };
+
+    socketRef.current.onerror = (err) => {
+      console.error("WebSocket error:", err);
+    };
+  }, [invoiceData?.payment_hash]);
+
   const handlePaymentPop = () => {
     setPaymentPop(!paymentPop);
   };
+
+  const formatCurrency = (value) => {
+    const cents = value.padStart(3, "0"); // ensure at least 3 digits
+    const dollars = cents.slice(0, -2);
+    const decimal = cents.slice(-2);
+    return `$${parseInt(dollars, 10)}.${decimal}`;
+  };
+
+  const handleCopyInvoice = async () => {
+    try {
+      await navigator.clipboard.writeText(invoiceData?.payment_request || "");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); // reset after 2s
+    } catch (err) {
+      console.error("Failed to copy invoice:", err);
+    }
+  };
+
   return (
     <>
-      <div
-        className={` fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]`}
-      >
+      <div className="fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]">
         <button
           onClick={() => setPaymentPop(!paymentPop)}
           className="bg-black/50 h-10 w-10 items-center rounded-full p-0 absolute mx-auto left-0 right-0 bottom-10 z-[99999] inline-flex justify-center border border-[#5f5f5f59]"
@@ -19,29 +69,54 @@ const PaymentPopup = ({ paymentPop, setPaymentPop }) => {
         <div
           onClick={handlePaymentPop}
           className="absolute inset-0 backdrop-blur-xl"
-        ></div>
-        <div
-          className={`modalDialog relative p-3 lg:p-6 mx-auto w-full rounded-[20px] z-10 overflow-scroll border border-[#dddddd21] bg-[#00000099] no-scrollbar max-w-[500px]`}
-        >
-          <div className="py-2">
-            <div className="flex items-center justify-center max-w-[max-content] mx-auto border bg-white p-1 text-black">
-              {qrIcn}
-            </div>
-          </div>
-          <div className="py-2">
-            <div className="text-center">
-              <h4 className="m-0 font-bold text-3xl ">96 sats</h4>
-              <h4 className="m-0 font-medium text-xl">
-                96 sats <span className="text-xs">(+ 0 tip)</span>
-              </h4>
-              <p className="m-0 text-[#838383] text-xs">NFC not supported</p>
-              <div className="mt-3">
-                <button className="flex items-center justify-center rounded-xl bg-[#ea611d] text-[14px] w-full p-3">
-                  Copy Invoice
-                </button>
+        />
+        <div className="modalDialog relative p-3 lg:p-6 mx-auto w-full rounded-[20px] z-10 overflow-scroll border border-[#dddddd21] bg-[#00000099] no-scrollbar max-w-[500px]">
+          {paymentSuccess ? (
+            <>
+              {" "}
+              <div className="text-center text-green-500 text-4xl font-bold py-10">
+                {" "}
+                ✅ Payment Received{" "}
               </div>
-            </div>
-          </div>
+            </>
+          ) : (
+            <>
+              <div className="py-2">
+                <div className="flex items-center justify-center max-w-[max-content] mx-auto border bg-white p-1 text-black">
+                  <Image
+                    alt=""
+                    src={qrCodeImage}
+                    height={10000}
+                    width={10000}
+                    className="max-w-full mx-auto h-auto w-auto"
+                    style={{ height: 150 }}
+                  />
+                </div>
+              </div>
+              <div className="py-2">
+                <div className="text-center">
+                  <h4 className="m-0 font-bold text-3xl ">
+                    {formatCurrency(amount)}
+                  </h4>
+                  <h4 className="m-0 font-medium text-xl">
+                    {formatCurrency(amount)}
+                    <span className="text-xs">(+ 1 tip)</span>
+                  </h4>
+                  <p className="m-0 text-[#838383] text-xs">
+                    {memo ? memo : "TPOS Madhouse Wallet"}
+                  </p>
+                  <div className="mt-3">
+                    <button
+                      onClick={handleCopyInvoice}
+                      className="flex items-center justify-center rounded-xl bg-[#ea611d] text-[14px] w-full p-3"
+                    >
+                      {copied ? "Copied!" : "Copy Invoice"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </>
@@ -76,41 +151,6 @@ const crossIcn = (
           fill="var(--textColor)"
           transform="translate(0.564453)"
         ></rect>
-      </clipPath>
-    </defs>
-  </svg>
-);
-
-const qrIcn = (
-  <svg
-    width="150"
-    height="150"
-    viewBox="0 0 96 96"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <g clipPath="url(#clip0_23_10)">
-      <path d="M12 12H24V24H12V12Z" fill="black" />
-      <path
-        d="M36 0V36H0V0H36ZM30 6H6V30H30V6ZM24 72H12V84H24V72Z"
-        fill="black"
-      />
-      <path
-        d="M36 60V96H0V60H36ZM6 66V90H30V66H6ZM72 12H84V24H72V12Z"
-        fill="black"
-      />
-      <path
-        d="M60 0V36H96V0H60ZM90 6V30H66V6H90ZM48 6V0H54V12H48V24H42V6H48ZM48 36V24H54V36H48ZM36 48V42H42V36H48V48H54V42H84V48H60V54H42V48H36ZM36 48V54H12V48H6V54H0V42H18V48H36ZM96 54H90V42H96V54ZM90 54H84V66H96V60H90V54ZM66 54H78V60H72V66H66V54ZM78 72V66H72V72H66V78H54V84H72V72H78ZM78 72H96V78H84V84H78V72ZM54 66V72H60V60H42V66H54Z"
-        fill="black"
-      />
-      <path
-        d="M42 72H48V90H72V96H42V72ZM96 84V96H78V90H90V84H96Z"
-        fill="black"
-      />
-    </g>
-    <defs>
-      <clipPath id="clip0_23_10">
-        <rect width="96" height="96" fill="white" />
       </clipPath>
     </defs>
   </svg>
