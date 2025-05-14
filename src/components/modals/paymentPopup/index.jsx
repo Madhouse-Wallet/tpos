@@ -21,8 +21,10 @@ const PaymentPopup = ({
     );
 
     socketRef.current.onmessage = (event) => {
+      console.log("line-event", event);
       const data = JSON.parse(event.data);
-      if (data.status === "paid") {
+      console.log("line-25", data);
+      if (data.status === "success") {
         setPaymentSuccess(true);
 
         setTimeout(() => {
