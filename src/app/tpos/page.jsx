@@ -16,6 +16,8 @@ const Tpos = () => {
   const [paymentPop, setPaymentPop] = useState(false);
   const [historyPop, setHistoryPop] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  const [email, setEmail] = useState("");
+  const [walletId, setWalletId] = useState("");
   const [tpoId, setTpoId] = useState(null);
   const [invoiceData, setInvoiceData] = useState(null);
   const [qrCodeImage, setQrCodeImage] = useState("");
@@ -50,17 +52,15 @@ const Tpos = () => {
   }, [amount]);
 
   useEffect(() => {
-    if (params.tpoId) {
-      setTpoId(params.tpoId);
-    } else if (params.id) {
-      setTpoId(params.id);
-    } else {
-      const url = new URL(window.location.href);
-      const idFromQuery = url.searchParams.get("id");
-      if (idFromQuery) {
-        setTpoId(idFromQuery);
-      }
-    }
+    const url = new URL(window.location.href);
+
+    const id = params.tpoId || params.id || url.searchParams.get("id");
+    const email = params.email || url.searchParams.get("email");
+    const wallet = params.walletId || url.searchParams.get("walletId");
+
+    if (id) setTpoId(id);
+    if (email) setEmail(email);
+    if (wallet) setWalletId(wallet);
   }, [params]);
 
   const generateQRCode = async (paymentRequest) => {
@@ -125,6 +125,7 @@ const Tpos = () => {
 
     if (!tpoId) {
       setError("TPOS ID is missing");
+      setPaymentPop(true);
       return;
     }
 
@@ -154,6 +155,7 @@ const Tpos = () => {
     if (tab === 0) {
       // Qr Code to Pay tab
       createInvoiceAndShowQR();
+      // setPaymentPop(true);
     } else {
       // Tap to Pay tab - use original functionality
       setShowLoader(true);
@@ -175,6 +177,8 @@ const Tpos = () => {
             invoiceData={invoiceData} // Pass invoice data to popup
             amount={amount} // Pass amount to popup
             memo={memo} // Pass memo to popup
+            walletId={walletId}
+            email={email}
           />,
           document.body
         )}
@@ -199,8 +203,24 @@ const Tpos = () => {
         >
           {historyIcn}
         </button>
+        <div className="absolute top-2 left-2 text-xs inline-flex mb-4 items-center gap-2 rounded px-3 py-1 bg-black/50 text-left">
+          <ul className="list-none pl-0 mb-0">
+            <li className="py-1 flex items-center gap-1">
+              <span className="font-bold themeClr">{calculatorIcn}</span>{" "}
+              {tpoId || "not found"}
+            </li>
+            <li className="py-1 flex items-center gap-1">
+              <span className="font-bold themeClr">{emailIcn}</span>{" "}
+              {email || "not found"}
+            </li>
+            <li className="py-1 flex items-center gap-1">
+              <span className="font-bold themeClr">{walletIcn}</span>{" "}
+              {walletId || "not found"}
+            </li>
+          </ul>
+        </div>
         <div className="container px-3 h-full">
-          <div className="grid gap-3 grid-cols-12 h-full">
+          <div className="grid gap-3 grid-cols-12 h-full pt-[60px] sm:pt-0">
             <div className="col-span-12 h-full">
               <div className="h-full flex flex-col justify-between">
                 <div className="text-center top">
@@ -346,6 +366,63 @@ const historyIcn = (
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const calculatorIcn = (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 10 12"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M1 0C0.734784 0 0.48043 0.105357 0.292893 0.292893C0.105357 0.48043 0 0.734784 0 1V11C0 11.2652 0.105357 11.5196 0.292893 11.7071C0.48043 11.8946 0.734784 12 1 12H9C9.26522 12 9.51957 11.8946 9.70711 11.7071C9.89464 11.5196 10 11.2652 10 11V1C10 0.734784 9.89464 0.48043 9.70711 0.292893C9.51957 0.105357 9.26522 0 9 0H1ZM2 2V4H8V2H2ZM3 5V6H2V5H3ZM5.5 5V6H4.5V5H5.5ZM8 6V5H7V6H8ZM3 7V8H2V7H3ZM5.5 8V7H4.5V8H5.5ZM8 7V10H7V7H8ZM3 10V9H2V10H3ZM4.5 10V9H5.5V10H4.5Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+const emailIcn = (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 17 12"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M16.165 -1.25454e-05C16.0969 -0.00703521 16.0282 -0.00703521 15.96 -1.25454e-05H1.96001C1.87028 0.00137002 1.78115 0.0148241 1.69501 0.0399874L8.92001 7.23499L16.165 -1.25454e-05Z"
+      fill="currentColor"
+    />
+    <path
+      d="M16.905 0.695007L9.625 7.94501C9.43763 8.13126 9.18418 8.2358 8.92 8.2358C8.65581 8.2358 8.40236 8.13126 8.215 7.94501L0.999996 0.750007C0.977816 0.831528 0.966056 0.91553 0.964996 1.00001V11C0.964996 11.2652 1.07035 11.5196 1.25789 11.7071C1.44543 11.8947 1.69978 12 1.965 12H15.965C16.2302 12 16.4846 11.8947 16.6721 11.7071C16.8596 11.5196 16.965 11.2652 16.965 11V1.00001C16.961 0.895835 16.9408 0.792925 16.905 0.695007ZM2.65 11H1.955V10.285L5.59 6.68001L6.295 7.38501L2.65 11ZM15.955 11H15.255L11.61 7.38501L12.315 6.68001L15.95 10.285L15.955 11Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+const walletIcn = (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 23 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M18 8C18 7.73478 18.1054 7.48043 18.2929 7.29289C18.4804 7.10536 18.7348 7 19 7H19.01C19.2752 7 19.5296 7.10536 19.7171 7.29289C19.9046 7.48043 20.01 7.73478 20.01 8C20.01 8.26522 19.9046 8.51957 19.7171 8.70711C19.5296 8.89464 19.2752 9 19.01 9H19C18.7348 9 18.4804 8.89464 18.2929 8.70711C18.1054 8.51957 18 8.26522 18 8Z"
+      fill="black"
+    />
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M17.6 0H2.4C1.76348 0 1.15303 0.252856 0.702944 0.702944C0.252856 1.15303 0 1.76348 0 2.4V13.6C0 14.2365 0.252856 14.847 0.702944 15.2971C1.15303 15.7471 1.76348 16 2.4 16H17.6C18.2365 16 18.847 15.7471 19.2971 15.2971C19.7471 14.847 20 14.2365 20 13.6V12H20.4C21.0896 12 21.7509 11.7261 22.2385 11.2385C22.7261 10.7509 23 10.0896 23 9.4V6.6C23 6.25856 22.9327 5.92047 22.8021 5.60502C22.6714 5.28958 22.4799 5.00295 22.2385 4.76152C21.997 4.52009 21.7104 4.32858 21.395 4.19791C21.0795 4.06725 20.7414 4 20.4 4H20V2.4C20 1.76348 19.7471 1.15303 19.2971 0.702944C18.847 0.252856 18.2365 0 17.6 0ZM15.6 6C15.4409 6 15.2883 6.06321 15.1757 6.17574C15.0632 6.28826 15 6.44087 15 6.6V9.4C15 9.55913 15.0632 9.71174 15.1757 9.82426C15.2883 9.93679 15.4409 10 15.6 10H20.4C20.5591 10 20.7117 9.93679 20.8243 9.82426C20.9368 9.71174 21 9.55913 21 9.4V6.6C21 6.44087 20.9368 6.28826 20.8243 6.17574C20.7117 6.06321 20.5591 6 20.4 6H15.6Z"
+      fill="currentColor"
     />
   </svg>
 );
