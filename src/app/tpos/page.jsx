@@ -32,14 +32,20 @@ const Tpos = () => {
   useEffect(() => {
     async function fetchSats() {
       try {
-        const res = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-        );
+        const res = await fetch(process.env.NEXT_PUBLIC_BITCOIN_PRICE_URL);
         const data = await res.json();
         const btcPriceUsd = data?.bitcoin?.usd;
         if (!btcPriceUsd) throw new Error("BTC price not found");
         const usdAmount = formatCurrencyWithoutSign(amount);
-        const calculatedSats = Math.floor(
+        const calculatedSats = Math.ceil(
+          (usdAmount / btcPriceUsd) * 100_000_000
+        );
+        console.log(
+          "line-4222",
+          data,
+          btcPriceUsd,
+          usdAmount,
+          calculatedSats,
           (usdAmount / btcPriceUsd) * 100_000_000
         );
         setSats(calculatedSats);
@@ -136,11 +142,12 @@ const Tpos = () => {
 
       const response = await createTposInvoice(
         tpoId,
-        amountValue,
-        memo || "TPOS Madhouse Wallet", // Use memo if provided, otherwise use default text
-        1, // No tip
-        "", // No lightning address
-        {} // No additional details
+        // amountValue,
+        sats,
+        memo || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
+        1,
+        process.env.NEXT_PUBLIC_TPOS_LNURL,
+        {}
       );
       generateQRCode(response.payment_request);
       setInvoiceData(response);

@@ -30,21 +30,27 @@ export const createTposInvoice = async (
       throw new Error("TPOS ID is required");
     }
 
+    // Construct the body conditionally
+    const body = {
+      amount: Number(amount),
+      memo: memo || "",
+      details: details,
+      tip_amount: Number(tipAmount),
+    };
+
+    if (userLnaddress) {
+      body.user_lnaddress = userLnaddress;
+    }
+
     const response = await fetch(
-      `https://lnbits.madhousewallet.com/tpos/api/v1/tposs/${tpoId}/invoices`,
+      `${process.env.NEXT_PUBLIC_LNBITS_URL}/${tpoId}/invoices`,
       {
         method: "POST",
         headers: {
           accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          amount: Number(amount),
-          memo: memo || "",
-          details: details,
-          tip_amount: Number(tipAmount),
-          user_lnaddress: userLnaddress,
-        }),
+        body: JSON.stringify(body),
       }
     );
 
@@ -61,5 +67,3 @@ export const createTposInvoice = async (
     throw error;
   }
 };
-
-
