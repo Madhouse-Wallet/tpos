@@ -359,7 +359,7 @@ const Tpos = () => {
       // Tap to Pay tab - start Ethereum tap to pay
 
       startTapToPay();
-      processEthereumPayment("0x27eD98c4596a93Cf3B6caD3B3E91Fa321aBf63C5");
+      // processEthereumPayment("0x27eD98c4596a93Cf3B6caD3B3E91Fa321aBf63C5");
     }
   };
 
