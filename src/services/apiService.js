@@ -12,7 +12,7 @@ export const createTposInvoice = async (
   tpoId,
   amount,
   memo,
-  tipAmount = 0,
+  // tipAmount = 0,
   userLnaddress = "",
   details = {}
 ) => {
@@ -22,7 +22,7 @@ export const createTposInvoice = async (
       tpoId,
       amount,
       memo,
-      tipAmount,
+      // tipAmount,
       userLnaddress,
       details
     );
@@ -35,7 +35,7 @@ export const createTposInvoice = async (
       amount: Number(amount),
       memo: memo || "",
       details: details,
-      tip_amount: Number(tipAmount),
+      // tip_amount: Number(tipAmount),
     };
 
     if (userLnaddress) {
@@ -64,6 +64,54 @@ export const createTposInvoice = async (
     return await response.json();
   } catch (error) {
     console.error("Error creating TPOS invoice:", error);
+    throw error;
+  }
+};
+
+export const payInvoice = async (invoice, email) => {
+  try {
+    try {
+      return await fetch(`/api/payInvoice`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invoice,
+          email,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("data-->", data);
+          return data;
+        });
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
+  } catch (error) {
+    console.log("sendBtc error-->", error);
+    return false;
+  }
+};
+
+export const getUserByWallet = async (walletAddress) => {
+  try {
+    const response = await fetch(`/api/users/${walletAddress}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch user details");
+    }
+
+    const data = await response.json();
+    return data.user;
+  } catch (error) {
+    console.error("Error fetching user by wallet:", error);
     throw error;
   }
 };

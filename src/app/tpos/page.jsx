@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import PaymentPopup from "@/components/modals/paymentPopup";
 import HistoryPopup from "@/components/modals/HistoryPopup";
@@ -7,7 +7,7 @@ import animationData from "./taptoPay.json";
 import LottieComponent from "./TaptoPayanimation";
 import { useParams, useRouter } from "next/navigation";
 import QRCode from "qrcode";
-import { createTposInvoice } from "../../services/apiService";
+import { createTposInvoice, getUserByWallet, payInvoice } from "../../services/apiService";
 
 const Tpos = () => {
   const [amount, setAmount] = useState("");
@@ -22,6 +22,16 @@ const Tpos = () => {
   const [invoiceData, setInvoiceData] = useState(null);
   const [qrCodeImage, setQrCodeImage] = useState("");
   const [error, setError] = useState("");
+
+  // New states for Ethereum tap to pay
+  const [ethereumAddress, setEthereumAddress] = useState("");
+  const [showTapModal, setShowTapModal] = useState(false);
+  const [tapCountdown, setTapCountdown] = useState(20);
+  const [isListeningForTap, setIsListeningForTap] = useState(false);
+
+  const typedRef = useRef("");
+  const timeoutRef = useRef(null);
+  const countdownRef = useRef(null);
 
   // Get URL parameters
   const params = useParams();
@@ -69,6 +79,189 @@ const Tpos = () => {
     if (wallet) setWalletId(wallet);
   }, [params]);
 
+  // Ethereum address validation
+  const isValidEthereumAddress = (address) => {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
+  };
+
+  // Keyboard listener for Ethereum address capture
+  useEffect(() => {
+    if (!isListeningForTap) return;
+
+    let typed = "";
+
+    const handleKeyPress = (e) => {
+      // Clear any existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      // Handle Enter key - process the accumulated input
+      if (e.key === "Enter") {
+        if (typed.length > 20) {
+          console.log("Ethereum address received from hardware:", typed);
+
+          if (isValidEthereumAddress(typed)) {
+            setEthereumAddress(typed);
+            console.log("✅ Valid Ethereum address detected:", typed);
+            // Close the tap modal and show success
+            closeTapModal();
+            // Here you can add logic to process the Ethereum payment
+            processEthereumPayment(typed);
+          } else {
+            console.log("⚠️ Invalid Ethereum address format:", typed);
+            setError("Invalid Ethereum address format");
+          }
+        }
+        typed = "";
+        typedRef.current = "";
+        return;
+      }
+
+      // Handle backspace
+      if (e.key === "Backspace") {
+        typed = typed.slice(0, -1);
+        typedRef.current = typed;
+        return;
+      }
+
+      // Only accept alphanumeric characters
+      if (/^[a-zA-Z0-9]$/.test(e.key)) {
+        typed += e.key;
+        typedRef.current = typed;
+
+        // Set timeout to auto-process if no Enter key
+        timeoutRef.current = setTimeout(() => {
+          if (typed.length > 20) {
+            console.log("Auto-processing Ethereum address:", typed);
+
+            if (isValidEthereumAddress(typed)) {
+              setEthereumAddress(typed);
+              console.log("✅ Valid Ethereum address detected:", typed);
+              closeTapModal();
+              processEthereumPayment(typed);
+            } else {
+              console.log("⚠️ Invalid Ethereum address format:", typed);
+              setError("Invalid Ethereum address format");
+            }
+
+            typed = "";
+            typedRef.current = "";
+          }
+        }, 1000);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      // Prevent default for alphanumeric keys when actively receiving input
+      if (typedRef.current.length > 0 && /^[a-zA-Z0-9]$/.test(e.key)) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("keypress", handleKeyPress);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keypress", handleKeyPress);
+      window.removeEventListener("keydown", handleKeyDown);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [isListeningForTap]);
+
+  // Countdown timer for tap modal
+  useEffect(() => {
+    if (showTapModal && tapCountdown > 0) {
+      countdownRef.current = setTimeout(() => {
+        setTapCountdown((prev) => prev - 1);
+      }, 1000);
+    } else if (tapCountdown === 0) {
+      closeTapModal();
+    }
+
+    return () => {
+      if (countdownRef.current) {
+        clearTimeout(countdownRef.current);
+      }
+    };
+  }, [showTapModal, tapCountdown]);
+
+  // Function to start tap to pay process
+  const startTapToPay = () => {
+    if (!amount || parseInt(amount) <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
+
+    setError("");
+    setEthereumAddress("");
+    setShowTapModal(true);
+    setTapCountdown(20);
+    setIsListeningForTap(true);
+  };
+
+  // Function to close tap modal
+  const closeTapModal = () => {
+    setShowTapModal(false);
+    setIsListeningForTap(false);
+    setTapCountdown(20);
+    if (countdownRef.current) {
+      clearTimeout(countdownRef.current);
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+  };
+
+  const processEthereumPayment = async (address) => {
+    console.log("Processing Ethereum payment for address:", address);
+    console.log("Amount:", formatCurrencyWithoutSign(amount));
+    console.log("Memo:", memo);
+
+    // Close the tap modal first
+    closeTapModal();
+
+    try {
+      // Show loader while processing
+      setShowLoader(true);
+
+      // 1. Fetch user details by wallet address using API
+      const existingUser = await getUserByWallet(address);
+
+      if (!existingUser) {
+        throw new Error("User not found for this wallet address");
+      }
+
+      // 2. Generate invoice with user's lnUrlAddress
+      const response = await createTposInvoice(
+        tpoId,
+        sats,
+        memo || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
+        // 1,
+        existingUser?.lnUrlAddresss,
+        {}
+      );
+
+      // 3. Pay the invoice
+      const result = await payInvoice(
+        response, // Pass the invoice response
+        address // Pass the wallet address
+      );
+
+      console.log("Payment result:", result);
+
+      setTimeout(() => {
+        setShowLoader(false);
+        // You can show a success modal or redirect here
+      }, 3000);
+    } catch (error) {
+      console.error("Error processing Ethereum payment:", error);
+      setError(`Payment failed: ${error.message}`);
+      setShowLoader(false);
+    }
+  };
   const generateQRCode = async (paymentRequest) => {
     try {
       const qr = await QRCode.toDataURL(paymentRequest);
@@ -145,7 +338,7 @@ const Tpos = () => {
         // amountValue,
         sats,
         memo || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
-        1,
+        // 1,
         process.env.NEXT_PUBLIC_TPOS_LNURL,
         {}
       );
@@ -162,13 +355,11 @@ const Tpos = () => {
     if (tab === 0) {
       // Qr Code to Pay tab
       createInvoiceAndShowQR();
-      // setPaymentPop(true);
     } else {
-      // Tap to Pay tab - use original functionality
-      setShowLoader(true);
-      setTimeout(() => {
-        setShowLoader(false);
-      }, 5000);
+      // Tap to Pay tab - start Ethereum tap to pay
+
+      startTapToPay();
+      processEthereumPayment("0x27eD98c4596a93Cf3B6caD3B3E91Fa321aBf63C5");
     }
   };
 
@@ -198,8 +389,11 @@ const Tpos = () => {
           />,
           document.body
         )}
-      {showLoader && (
-        <div className="fixed bg-black/80 flex items-center justify-center top-0 left-0 h-full w-full z-[9999]">
+      {showTapModal && (
+        <div
+          className="fixed bg-black/80 flex items-center justify-center top-0 left-0 h-full w-full z-[9999]"
+          onClick={closeTapModal}
+        >
           <LottieComponent animation={animationData} />
         </div>
       )}
