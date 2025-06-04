@@ -68,7 +68,7 @@ export const createTposInvoice = async (
   }
 };
 
-export const payInvoice = async (invoice, email) => {
+export const payInvoice = async (invoice, address) => {
   try {
     try {
       return await fetch(`/api/payInvoice`, {
@@ -76,7 +76,7 @@ export const payInvoice = async (invoice, email) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           invoice,
-          email,
+          address,
         }),
       })
         .then((res) => res.json())

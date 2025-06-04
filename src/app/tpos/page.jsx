@@ -12,7 +12,6 @@ import {
   getUserByWallet,
   payInvoice,
 } from "../../services/apiService";
-import { listenForHardwareInput } from "@/pages/api/card-reader";
 
 const Tpos = () => {
   const [amount, setAmount] = useState("");
@@ -31,7 +30,7 @@ const Tpos = () => {
   // States for Ethereum tap to pay
   const [ethereumAddress, setEthereumAddress] = useState("");
   const [showTapModal, setShowTapModal] = useState(false);
-  const [isListeningForInput, setIsListeningForInput] = useState(false);
+  const [userInput, setUserInput] = useState("");
 
   // Get URL parameters
   const params = useParams();
@@ -76,53 +75,30 @@ const Tpos = () => {
     return /^0x[a-fA-F0-9]{40}$/.test(address);
   };
 
-  // Function to call the API and listen for input
-  const callListenAPI = async () => {
-    try {
-      setIsListeningForInput(true);
+  // Function to handle input received from LottieComponent
+  const handleInputReceived = (input) => {
+    console.log("Input received:", input);
+    setUserInput(input);
 
-      const result = await listenForHardwareInput();
-      console.log("line-85", result);
-      if (result.success && result.data) {
-        const receivedInput = result.data.trim();
-        console.log("Hardware input received:", receivedInput);
+    // Close the tap modal
+    closeTapModal();
 
-        // Close the tap modal immediately when we receive input
-        closeTapModal();
-
-        // Validate if it's a valid Ethereum address
-        if (isValidEthereumAddress(receivedInput)) {
-          setEthereumAddress(receivedInput);
-          console.log("✅ Valid Ethereum address detected:", receivedInput);
-          // Process the Ethereum payment
-          processEthereumPayment(receivedInput);
-        } else {
-          console.log("⚠️ Invalid Ethereum address format:", receivedInput);
-          setError("Invalid Ethereum address format");
-          // You can show a toast message here
-          showToastMessage("Invalid Ethereum address format");
-        }
-      } else {
-        console.log("No input received or timeout");
-        setError("No input received or timeout");
-        closeTapModal();
-      }
-    } catch (error) {
-      console.error("Error listening for hardware input:", error);
-      setError("Failed to listen for hardware input");
-      closeTapModal();
-    } finally {
-      setIsListeningForInput(false);
+    // Validate if it's a valid Ethereum address
+    if (isValidEthereumAddress(input.trim())) {
+      setEthereumAddress(input.trim());
+      console.log("✅ Valid Ethereum address detected:", input.trim());
+      // Process the Ethereum payment
+      processEthereumPayment(input);
+    } else {
+      console.log("⚠️ Invalid Ethereum address format:", input.trim());
+      setError("Invalid Ethereum address format");
+      // showToastMessage("Invalid Ethereum address format");
     }
   };
 
-  // Function to show toast message (you can implement your preferred toast library)
+  // Function to show toast message
   const showToastMessage = (message) => {
-    // You can use react-toastify or any other toast library here
-    // For now, just using alert as an example
     alert(message);
-    // Example with react-toastify:
-    // toast.error(message);
   };
 
   // Function to start tap to pay process
@@ -134,16 +110,13 @@ const Tpos = () => {
 
     setError("");
     setEthereumAddress("");
+    setUserInput("");
     setShowTapModal(true);
-
-    // Start listening for hardware input
-    await callListenAPI();
   };
 
   // Function to close tap modal
   const closeTapModal = () => {
     setShowTapModal(false);
-    setIsListeningForInput(false);
   };
 
   const processEthereumPayment = async (address) => {
@@ -173,7 +146,7 @@ const Tpos = () => {
 
       // 3. Pay the invoice
       const result = await payInvoice(
-        response, // Pass the invoice response
+        response?.payment_request, // Pass the invoice response
         address // Pass the wallet address
       );
 
@@ -316,7 +289,11 @@ const Tpos = () => {
           className="fixed bg-black/80 flex items-center justify-center top-0 left-0 h-full w-full z-[9999]"
           onClick={closeTapModal}
         >
-          <LottieComponent animation={animationData} />
+          <LottieComponent
+            animation={animationData}
+            onInputReceived={handleInputReceived}
+            onClose={closeTapModal}
+          />
         </div>
       )}
       <section className="h-screen pt-12 pb-5 text-center relative">
