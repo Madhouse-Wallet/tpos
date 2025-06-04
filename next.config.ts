@@ -5,15 +5,18 @@ const nextConfig: NextConfig = {
     styledComponents: true, // Enables SSR support for styled-components
   },
   images: {
-    domains: ['futurepepe-media.suffescom.dev'],
+    domains: ["media.madhousewallet.com"],
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "futurepepe-media.suffescom.dev",
+        hostname: "media.madhousewallet.com",
         port: "",
         pathname: "/**",
       },
     ],
+  },
+  experimental: {
+    serverComponentsExternalPackages: ["child_process"],
   },
 };
 

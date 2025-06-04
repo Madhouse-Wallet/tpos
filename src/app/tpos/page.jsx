@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import PaymentPopup from "@/components/modals/paymentPopup";
 import HistoryPopup from "@/components/modals/HistoryPopup";
@@ -7,7 +7,12 @@ import animationData from "./taptoPay.json";
 import LottieComponent from "./TaptoPayanimation";
 import { useParams, useRouter } from "next/navigation";
 import QRCode from "qrcode";
-import { createTposInvoice, getUserByWallet, payInvoice } from "../../services/apiService";
+import {
+  createTposInvoice,
+  getUserByWallet,
+  payInvoice,
+} from "../../services/apiService";
+import { listenForHardwareInput } from "@/pages/api/card-reader";
 
 const Tpos = () => {
   const [amount, setAmount] = useState("");
@@ -23,15 +28,10 @@ const Tpos = () => {
   const [qrCodeImage, setQrCodeImage] = useState("");
   const [error, setError] = useState("");
 
-  // New states for Ethereum tap to pay
+  // States for Ethereum tap to pay
   const [ethereumAddress, setEthereumAddress] = useState("");
   const [showTapModal, setShowTapModal] = useState(false);
-  const [tapCountdown, setTapCountdown] = useState(20);
-  const [isListeningForTap, setIsListeningForTap] = useState(false);
-
-  const typedRef = useRef("");
-  const timeoutRef = useRef(null);
-  const countdownRef = useRef(null);
+  const [isListeningForInput, setIsListeningForInput] = useState(false);
 
   // Get URL parameters
   const params = useParams();
@@ -48,14 +48,6 @@ const Tpos = () => {
         if (!btcPriceUsd) throw new Error("BTC price not found");
         const usdAmount = formatCurrencyWithoutSign(amount);
         const calculatedSats = Math.ceil(
-          (usdAmount / btcPriceUsd) * 100_000_000
-        );
-        console.log(
-          "line-4222",
-          data,
-          btcPriceUsd,
-          usdAmount,
-          calculatedSats,
           (usdAmount / btcPriceUsd) * 100_000_000
         );
         setSats(calculatedSats);
@@ -84,112 +76,57 @@ const Tpos = () => {
     return /^0x[a-fA-F0-9]{40}$/.test(address);
   };
 
-  // Keyboard listener for Ethereum address capture
-  useEffect(() => {
-    if (!isListeningForTap) return;
+  // Function to call the API and listen for input
+  const callListenAPI = async () => {
+    try {
+      setIsListeningForInput(true);
 
-    let typed = "";
+      const result = await listenForHardwareInput();
+      console.log("line-85", result);
+      if (result.success && result.data) {
+        const receivedInput = result.data.trim();
+        console.log("Hardware input received:", receivedInput);
 
-    const handleKeyPress = (e) => {
-      // Clear any existing timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+        // Close the tap modal immediately when we receive input
+        closeTapModal();
 
-      // Handle Enter key - process the accumulated input
-      if (e.key === "Enter") {
-        if (typed.length > 20) {
-          console.log("Ethereum address received from hardware:", typed);
-
-          if (isValidEthereumAddress(typed)) {
-            setEthereumAddress(typed);
-            console.log("✅ Valid Ethereum address detected:", typed);
-            // Close the tap modal and show success
-            closeTapModal();
-            // Here you can add logic to process the Ethereum payment
-            processEthereumPayment(typed);
-          } else {
-            console.log("⚠️ Invalid Ethereum address format:", typed);
-            setError("Invalid Ethereum address format");
-          }
+        // Validate if it's a valid Ethereum address
+        if (isValidEthereumAddress(receivedInput)) {
+          setEthereumAddress(receivedInput);
+          console.log("✅ Valid Ethereum address detected:", receivedInput);
+          // Process the Ethereum payment
+          processEthereumPayment(receivedInput);
+        } else {
+          console.log("⚠️ Invalid Ethereum address format:", receivedInput);
+          setError("Invalid Ethereum address format");
+          // You can show a toast message here
+          showToastMessage("Invalid Ethereum address format");
         }
-        typed = "";
-        typedRef.current = "";
-        return;
+      } else {
+        console.log("No input received or timeout");
+        setError("No input received or timeout");
+        closeTapModal();
       }
-
-      // Handle backspace
-      if (e.key === "Backspace") {
-        typed = typed.slice(0, -1);
-        typedRef.current = typed;
-        return;
-      }
-
-      // Only accept alphanumeric characters
-      if (/^[a-zA-Z0-9]$/.test(e.key)) {
-        typed += e.key;
-        typedRef.current = typed;
-
-        // Set timeout to auto-process if no Enter key
-        timeoutRef.current = setTimeout(() => {
-          if (typed.length > 20) {
-            console.log("Auto-processing Ethereum address:", typed);
-
-            if (isValidEthereumAddress(typed)) {
-              setEthereumAddress(typed);
-              console.log("✅ Valid Ethereum address detected:", typed);
-              closeTapModal();
-              processEthereumPayment(typed);
-            } else {
-              console.log("⚠️ Invalid Ethereum address format:", typed);
-              setError("Invalid Ethereum address format");
-            }
-
-            typed = "";
-            typedRef.current = "";
-          }
-        }, 1000);
-      }
-    };
-
-    const handleKeyDown = (e) => {
-      // Prevent default for alphanumeric keys when actively receiving input
-      if (typedRef.current.length > 0 && /^[a-zA-Z0-9]$/.test(e.key)) {
-        e.preventDefault();
-      }
-    };
-
-    window.addEventListener("keypress", handleKeyPress);
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keypress", handleKeyPress);
-      window.removeEventListener("keydown", handleKeyDown);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [isListeningForTap]);
-
-  // Countdown timer for tap modal
-  useEffect(() => {
-    if (showTapModal && tapCountdown > 0) {
-      countdownRef.current = setTimeout(() => {
-        setTapCountdown((prev) => prev - 1);
-      }, 1000);
-    } else if (tapCountdown === 0) {
+    } catch (error) {
+      console.error("Error listening for hardware input:", error);
+      setError("Failed to listen for hardware input");
       closeTapModal();
+    } finally {
+      setIsListeningForInput(false);
     }
+  };
 
-    return () => {
-      if (countdownRef.current) {
-        clearTimeout(countdownRef.current);
-      }
-    };
-  }, [showTapModal, tapCountdown]);
+  // Function to show toast message (you can implement your preferred toast library)
+  const showToastMessage = (message) => {
+    // You can use react-toastify or any other toast library here
+    // For now, just using alert as an example
+    alert(message);
+    // Example with react-toastify:
+    // toast.error(message);
+  };
 
   // Function to start tap to pay process
-  const startTapToPay = () => {
+  const startTapToPay = async () => {
     if (!amount || parseInt(amount) <= 0) {
       setError("Please enter a valid amount");
       return;
@@ -198,30 +135,21 @@ const Tpos = () => {
     setError("");
     setEthereumAddress("");
     setShowTapModal(true);
-    setTapCountdown(20);
-    setIsListeningForTap(true);
+
+    // Start listening for hardware input
+    await callListenAPI();
   };
 
   // Function to close tap modal
   const closeTapModal = () => {
     setShowTapModal(false);
-    setIsListeningForTap(false);
-    setTapCountdown(20);
-    if (countdownRef.current) {
-      clearTimeout(countdownRef.current);
-    }
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    setIsListeningForInput(false);
   };
 
   const processEthereumPayment = async (address) => {
     console.log("Processing Ethereum payment for address:", address);
     console.log("Amount:", formatCurrencyWithoutSign(amount));
     console.log("Memo:", memo);
-
-    // Close the tap modal first
-    closeTapModal();
 
     try {
       // Show loader while processing
@@ -239,7 +167,6 @@ const Tpos = () => {
         tpoId,
         sats,
         memo || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
-        // 1,
         existingUser?.lnUrlAddresss,
         {}
       );
@@ -262,6 +189,7 @@ const Tpos = () => {
       setShowLoader(false);
     }
   };
+
   const generateQRCode = async (paymentRequest) => {
     try {
       const qr = await QRCode.toDataURL(paymentRequest);
@@ -331,14 +259,10 @@ const Tpos = () => {
     setError("");
 
     try {
-      const amountValue = parseInt(amount);
-
       const response = await createTposInvoice(
         tpoId,
-        // amountValue,
         sats,
         memo || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
-        // 1,
         process.env.NEXT_PUBLIC_TPOS_LNURL,
         {}
       );
@@ -357,9 +281,7 @@ const Tpos = () => {
       createInvoiceAndShowQR();
     } else {
       // Tap to Pay tab - start Ethereum tap to pay
-
       startTapToPay();
-      // processEthereumPayment("0x27eD98c4596a93Cf3B6caD3B3E91Fa321aBf63C5");
     }
   };
 
@@ -371,10 +293,10 @@ const Tpos = () => {
             paymentPop={paymentPop}
             setPaymentPop={setPaymentPop}
             tpoId={tpoId}
-            qrCodeImage={qrCodeImage} // Pass QR code image to popup
-            invoiceData={invoiceData} // Pass invoice data to popup
-            amount={amount} // Pass amount to popup
-            memo={memo} // Pass memo to popup
+            qrCodeImage={qrCodeImage}
+            invoiceData={invoiceData}
+            amount={amount}
+            memo={memo}
             walletId={walletId}
             email={email}
           />,
@@ -411,11 +333,11 @@ const Tpos = () => {
               {tpoId || "not found"}
             </li>
             <li className="py-1 flex items-center gap-1">
-              <span className="font-bold themeClr">{emailIcn}</span>{" "}
+              <span className="font-bold themeClr">{/* {emailIcn} */}</span>{" "}
               {email || "not found"}
             </li>
             <li className="py-1 flex items-center gap-1">
-              <span className="font-bold themeClr">{walletIcn}</span>{" "}
+              <span className="font-bold themeClr">{/* {walletIcn} */}</span>{" "}
               {walletId || "not found"}
             </li>
           </ul>
@@ -431,9 +353,6 @@ const Tpos = () => {
                   <p className="mb-0 mt-4 font-medium text-[20px]">
                     {sats} sat
                   </p>
-                  {/* {tpoId && (
-                    <p className="text-sm text-gray-500">TPO ID: {tpoId}</p>
-                  )} */}
                   {error && <p className="text-red-500 mt-2">{error}</p>}
                 </div>
                 <div className="center w-full max-w-[450px] mx-auto">
