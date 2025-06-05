@@ -168,11 +168,14 @@ const Tpos = () => {
       );
 
       console.log("Payment result:", result);
+
       setPaymentSuccess(true);
+      setShowLoader(false);
+
+      // Hide success popup after 8 seconds
       setTimeout(() => {
-        setShowLoader(false);
-        // You can show a success modal or redirect here
-      }, 3000);
+        setPaymentSuccess(false);
+      }, 8000);
     } catch (error) {
       console.error("Error processing Ethereum payment:", error);
       setError(`Payment failed: ${error.message}`);
@@ -302,16 +305,7 @@ const Tpos = () => {
           />,
           document.body
         )}
-      {paymentSuccess && (
-        <>
-          <div className="p-[30px]  rounded-xl bg-[#90ad9429]">
-            <div className="flex items-center justify-center">{tickIcn}</div>
-            <div className="text-center text-3xl font-medium py-3">
-              Payment Received{" "}
-            </div>
-          </div>
-        </>
-      )}
+
       {showTapModal && (
         <div
           className="fixed bg-black/80 flex items-center justify-center top-0 left-0 h-full w-full z-[9999]"
@@ -325,6 +319,24 @@ const Tpos = () => {
         </div>
       )}
       <section className="h-screen pt-12 pb-5 text-center relative">
+        {paymentSuccess && (
+          <>
+            <div className="fixed w-full h-full z-[9999]  top-0 left-0 flex items-center justify-center">
+              <div className="bg-black/50 h-full w-full absolute top-0 left-0 z-[-1]"></div>
+              <div className=" mx-auto left-0 right-0   max-w-[500px] w-full   rounded-xl bg-[#00000099]">
+                <div className="p-[30px]">
+                  <div className="flex items-center justify-center">
+                    {tickIcn}
+                  </div>
+                  <div className="text-center text-3xl font-medium py-3">
+                    Payment Received{" "}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         <button
           onClick={() => setHistoryPop(!historyPop)}
           className="absolute top-2 right-2 flex items-center justify-center h-[45px] w-[45px] bg-[#ea611d] transition duration-[400ms] hover:bg-[#000] rounded-full shadow"

@@ -1,8 +1,16 @@
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Inter } from "next/font/google";
 import moment from "moment";
 import LnbitsTransactionDetail from "../../../pages/TransactionDetail/LnbitsTransactionDetail";
+
+
+const oxanium = Inter({
+  subsets: ["latin"],
+  weight: ["200", "300", "400", "500", "600", "700", "800"], // pick what you need
+  variable: "--font-oxanium", // optional if using as a CSS variable
+});
 
 const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
   console.log("line-5", user);
@@ -12,7 +20,7 @@ const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
   const [transactionData, setTransactionData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  
+
   const formatBitcoinTransactionData = (txs) => {
     return txs.map((tx) => {
       const amount = tx.amount;
@@ -194,7 +202,7 @@ const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
           document.body
         )}
       <div
-        className={` fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]`}
+        className={`${oxanium.className} fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]`}
       >
         <button
           onClick={() => setHistoryPop(!historyPop)}

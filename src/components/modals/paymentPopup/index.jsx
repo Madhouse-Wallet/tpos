@@ -1,5 +1,14 @@
 import Image from "next/image";
 import React, { useRef, useState, useEffect } from "react";
+import { Inter } from "next/font/google";
+
+
+
+const oxanium = Inter({
+  subsets: ["latin"],
+  weight: ["200", "300", "400", "500", "600", "700", "800"], // pick what you need
+  variable: "--font-oxanium", // optional if using as a CSS variable
+});
 
 const PaymentPopup = ({
   paymentPop,
@@ -64,7 +73,7 @@ const PaymentPopup = ({
 
   return (
     <>
-      <div className="fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]">
+      <div className={`${oxanium.className} fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]`}>
         <button
           onClick={() => setPaymentPop(!paymentPop)}
           className="bg-black/50 h-10 w-10 items-center rounded-full p-0 absolute mx-auto left-0 right-0 bottom-10 z-[99999] inline-flex justify-center border border-[#5f5f5f59]"
