@@ -12,6 +12,7 @@ const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
   const [transactionData, setTransactionData] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  
   const formatBitcoinTransactionData = (txs) => {
     return txs.map((tx) => {
       const amount = tx.amount;
