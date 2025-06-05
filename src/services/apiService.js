@@ -115,3 +115,26 @@ export const getUserByWallet = async (walletAddress) => {
     throw error;
   }
 };
+
+export const getUserByEmail = async (email) => {
+  try {
+    console.log("line-121", email);
+    const response = await fetch(`/api/userDetail/${email}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch user details");
+    }
+
+    const data = await response.json();
+    return data.user;
+  } catch (error) {
+    console.error("Error fetching user by wallet:", error);
+    throw error;
+  }
+};

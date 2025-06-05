@@ -9,6 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import {
   createTposInvoice,
+  getUserByEmail,
   getUserByWallet,
   payInvoice,
 } from "../../services/apiService";
@@ -26,6 +27,8 @@ const Tpos = () => {
   const [invoiceData, setInvoiceData] = useState(null);
   const [qrCodeImage, setQrCodeImage] = useState("");
   const [error, setError] = useState("");
+  const [user, setUser] = useState("");
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   // States for Ethereum tap to pay
   const [ethereumAddress, setEthereumAddress] = useState("");
@@ -68,6 +71,20 @@ const Tpos = () => {
     if (id) setTpoId(id);
     if (email) setEmail(email);
     if (wallet) setWalletId(wallet);
+
+    const userData = async () => {
+      if (!email) {
+        return;
+      }
+      const existingUser = await getUserByEmail(email);
+
+      if (!existingUser) {
+        throw new Error("User not found for this wallet address");
+      }
+      setUser(existingUser);
+    };
+
+    userData();
   }, [params]);
 
   // Ethereum address validation
@@ -140,7 +157,7 @@ const Tpos = () => {
         tpoId,
         sats,
         memo || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
-        existingUser?.lnUrlAddresss,
+        existingUser?.lnaddress,
         {}
       );
 
@@ -151,7 +168,7 @@ const Tpos = () => {
       );
 
       console.log("Payment result:", result);
-
+      setPaymentSuccess(true);
       setTimeout(() => {
         setShowLoader(false);
         // You can show a success modal or redirect here
@@ -281,9 +298,20 @@ const Tpos = () => {
             historyPop={historyPop}
             setHistoryPop={setHistoryPop}
             tpoId={tpoId}
+            user={user}
           />,
           document.body
         )}
+      {paymentSuccess && (
+        <>
+          <div className="p-[30px]  rounded-xl bg-[#90ad9429]">
+            <div className="flex items-center justify-center">{tickIcn}</div>
+            <div className="text-center text-3xl font-medium py-3">
+              Payment Received{" "}
+            </div>
+          </div>
+        </>
+      )}
       {showTapModal && (
         <div
           className="fixed bg-black/80 flex items-center justify-center top-0 left-0 h-full w-full z-[9999]"
@@ -310,11 +338,11 @@ const Tpos = () => {
               {tpoId || "not found"}
             </li>
             <li className="py-1 flex items-center gap-1">
-              <span className="font-bold themeClr">{/* {emailIcn} */}</span>{" "}
+              <span className="font-bold themeClr">{emailIcn}</span>{" "}
               {email || "not found"}
             </li>
             <li className="py-1 flex items-center gap-1">
-              <span className="font-bold themeClr">{/* {walletIcn} */}</span>{" "}
+              <span className="font-bold themeClr">{walletIcn}</span>{" "}
               {walletId || "not found"}
             </li>
           </ul>
@@ -520,6 +548,21 @@ const walletIcn = (
       clipRule="evenodd"
       d="M17.6 0H2.4C1.76348 0 1.15303 0.252856 0.702944 0.702944C0.252856 1.15303 0 1.76348 0 2.4V13.6C0 14.2365 0.252856 14.847 0.702944 15.2971C1.15303 15.7471 1.76348 16 2.4 16H17.6C18.2365 16 18.847 15.7471 19.2971 15.2971C19.7471 14.847 20 14.2365 20 13.6V12H20.4C21.0896 12 21.7509 11.7261 22.2385 11.2385C22.7261 10.7509 23 10.0896 23 9.4V6.6C23 6.25856 22.9327 5.92047 22.8021 5.60502C22.6714 5.28958 22.4799 5.00295 22.2385 4.76152C21.997 4.52009 21.7104 4.32858 21.395 4.19791C21.0795 4.06725 20.7414 4 20.4 4H20V2.4C20 1.76348 19.7471 1.15303 19.2971 0.702944C18.847 0.252856 18.2365 0 17.6 0ZM15.6 6C15.4409 6 15.2883 6.06321 15.1757 6.17574C15.0632 6.28826 15 6.44087 15 6.6V9.4C15 9.55913 15.0632 9.71174 15.1757 9.82426C15.2883 9.93679 15.4409 10 15.6 10H20.4C20.5591 10 20.7117 9.93679 20.8243 9.82426C20.9368 9.71174 21 9.55913 21 9.4V6.6C21 6.44087 20.9368 6.28826 20.8243 6.17574C20.7117 6.06321 20.5591 6 20.4 6H15.6Z"
       fill="currentColor"
+    />
+  </svg>
+);
+
+const tickIcn = (
+  <svg
+    width="100"
+    height="100"
+    viewBox="0 0 146 146"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M73 9.125C89.9407 9.125 106.188 15.8547 118.166 27.8336C130.145 39.8124 136.875 56.0593 136.875 73C136.875 89.9407 130.145 106.188 118.166 118.166C106.188 130.145 89.9407 136.875 73 136.875C56.0593 136.875 39.8124 130.145 27.8336 118.166C15.8547 106.188 9.125 89.9407 9.125 73C9.125 56.0593 15.8547 39.8124 27.8336 27.8336C39.8124 15.8547 56.0593 9.125 73 9.125ZM65.043 85.6016L50.8536 71.4031C50.3449 70.8944 49.741 70.4909 49.0764 70.2156C48.4118 69.9403 47.6994 69.7986 46.9801 69.7986C46.2607 69.7986 45.5483 69.9403 44.8837 70.2156C44.2191 70.4909 43.6152 70.8944 43.1065 71.4031C42.0792 72.4305 41.502 73.8238 41.502 75.2767C41.502 76.7296 42.0792 78.1229 43.1065 79.1502L61.174 97.2178C61.6812 97.729 62.2847 98.1348 62.9495 98.4117C63.6143 98.6887 64.3274 98.8312 65.0476 98.8312C65.7678 98.8312 66.4808 98.6887 67.1456 98.4117C67.8105 98.1348 68.4139 97.729 68.9211 97.2178L106.334 59.7961C106.849 59.2895 107.259 58.6859 107.54 58.0201C107.821 57.3542 107.968 56.6393 107.971 55.9166C107.974 55.1939 107.835 54.4776 107.56 53.8092C107.285 53.1408 106.881 52.5334 106.37 52.022C105.859 51.5107 105.252 51.1055 104.584 50.8299C103.916 50.5543 103.2 50.4137 102.477 50.4162C101.754 50.4187 101.039 50.5643 100.373 50.8445C99.7069 51.1247 99.1028 51.5341 98.5956 52.049L65.043 85.6016Z"
+      fill="#14C32E"
     />
   </svg>
 );

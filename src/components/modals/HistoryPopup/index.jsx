@@ -1,12 +1,197 @@
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import moment from "moment";
+import LnbitsTransactionDetail from "../../../pages/TransactionDetail/LnbitsTransactionDetail";
 
-const HistoryPopup = ({ historyPop, setHistoryPop }) => {
+const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
+  console.log("line-5", user);
+
+  const [btcTransactions, setBtcTransactions] = useState([]);
+  const [detail, setDetail] = useState(false);
+  const [transactionData, setTransactionData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const formatBitcoinTransactionData = (txs) => {
+    return txs.map((tx) => {
+      const amount = tx.amount;
+      const isSend = amount < 0;
+
+      return {
+        id: tx.checking_id,
+        transactionHash: tx.checking_id,
+        from: isSend ? user?.wallet : "External",
+        to: isSend ? "External" : user?.wallet,
+        date: moment(tx.time).format("MMMM D, YYYY h:mm A"),
+        status: tx.status,
+        amount: `${amount.toFixed(2)} sats`,
+        type: isSend ? "send" : "receive",
+        summary:
+          tx.memo ||
+          (isSend
+            ? `Sent ${amount.toFixed(2)} sats`
+            : `Received ${amount.toFixed(2)} sats`),
+        category: "payment",
+        rawData: tx,
+      };
+    });
+  };
+
+  const fetchBitcoinTransactions = async () => {
+    setLoading(true);
+    try {
+      const checkUser = user;
+
+      // Check if tpoId matches lnbitLinkId to determine which API to call
+      const isLnbitLink = user?.lnbitLinkId === tpoId;
+
+      if (isLnbitLink) {
+        // Call /api/lnbits-transaction with lnbitAdminKey
+        const response = await fetch("/api/lnbits-transaction", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            walletId: tpoId,
+            tag: "tpos",
+            apiKey: checkUser?.lnbitAdminKey,
+          }),
+        });
+
+        const { status, data } = await response.json();
+
+        if (status === "success" && data) {
+          const formattedTransactions = formatBitcoinTransactionData(data);
+          setBtcTransactions(formattedTransactions);
+        }
+      } else {
+        // Call /api/lnbits-transaction-bitcoin with lnbitAdminKey_2
+        const response = await fetch("/api/lnbits-transaction-bitcoin", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            walletId: tpoId,
+            tag: "tpos",
+            apiKey: checkUser?.lnbitAdminKey_2,
+          }),
+        });
+
+        const { status, data } = await response.json();
+
+        if (status === "success" && data) {
+          const formattedTransactions = formatBitcoinTransactionData(data);
+          setBtcTransactions(formattedTransactions);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching Bitcoin transactions:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (historyPop && tpoId && user) {
+      fetchBitcoinTransactions();
+    }
+  }, [historyPop, tpoId, user]);
+
+  // Get status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "success":
+        return "text-green-500";
+      case "failed":
+        return "text-red-500";
+      case "pending":
+        return "text-yellow-500";
+      default:
+        return "text-gray-500";
+    }
+  };
+
+  // Get status text
+  const getStatusText = (status) => {
+    switch (status) {
+      case "success":
+        return "Confirmed";
+      case "failed":
+        return "Failed";
+      case "pending":
+        return "Pending";
+      default:
+        return "Unknown";
+    }
+  };
+
+  const groupTransactionsByDate = (txs) => {
+    const groups = {};
+
+    txs.forEach((tx) => {
+      if (tx?.date && typeof tx.date === "string") {
+        const txDate = moment(tx.date, "MMMM D, YYYY h:mm A");
+
+        if (txDate.isValid()) {
+          const dateKey = txDate.format("YYYY-MM-DD");
+
+          if (!groups[dateKey]) {
+            groups[dateKey] = [];
+          }
+
+          groups[dateKey].push(tx);
+        } else {
+          console.error("Invalid date format:", tx.date);
+        }
+      } else if (tx?.date && moment.isMoment(tx.date)) {
+        const dateKey = tx.date.format("YYYY-MM-DD");
+
+        if (!groups[dateKey]) {
+          groups[dateKey] = [];
+        }
+        groups[dateKey].push(tx);
+      } else {
+        console.error("Missing or invalid date:", tx?.date);
+      }
+    });
+
+    const sortedGroups = {};
+    Object.keys(groups)
+      .sort(
+        (a, b) =>
+          moment(b, "YYYY-MM-DD").valueOf() - moment(a, "YYYY-MM-DD").valueOf()
+      )
+      .forEach((key) => {
+        sortedGroups[key] = groups[key];
+      });
+
+    return sortedGroups;
+  };
+
+  const handleTransactionClick = (tx) => {
+    setDetail(!detail);
+    setTransactionData(tx);
+  };
+
   const handleHistoryPop = () => {
     setHistoryPop(!historyPop);
   };
+
+  const transactionsByDate = groupTransactionsByDate(btcTransactions);
+
   return (
     <>
+      {detail &&
+        createPortal(
+          <LnbitsTransactionDetail
+            detail={detail}
+            setDetail={setDetail}
+            transactionData={transactionData}
+          />,
+          document.body
+        )}
       <div
         className={` fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]`}
       >
@@ -26,94 +211,67 @@ const HistoryPopup = ({ historyPop, setHistoryPop }) => {
           <div className="top pb-4">
             <h4 className="m-0 font-bold text-2xl">Transaction History</h4>
           </div>
-          {/* <div className="text-center">No paid invoices</div> */}
-          <div className="grid gap-3 grid-cols-12">
-            {" "}
-            <div className="md:col-span-6 col-span-12">
-              <div className="bg-white/5 p-3 rounded-lg flex items-start gap-2 justify-between cursor-pointer hover:bg-black/60">
-                <div className="left flex items-start gap-2">
-                  <div className="flex-shrink-0 h-[40px] w-[40px] rounded-full flex items-center justify-center bg-white/50">
-                    {sendSvg}
-                  </div>
 
-                  <div className="content">
-                    <h4 className="m-0 font-medium ">Send to wallet 23**55</h4>
-
-                    <p className={`m-0 font-medium text-xs text-green-500`}>
-                      Confirmed
-                    </p>
-                  </div>
-                </div>
-
-                <div className="right">
-                  <p className="m-0 text-xs font-medium">-1.33</p>
-                </div>
-              </div>
+          {loading ? (
+            <div className="flex justify-center items-center p-10">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white"></div>
             </div>
-            <div className="md:col-span-6 col-span-12">
-              <div className="bg-white/5 p-3 rounded-lg flex items-start gap-2 justify-between cursor-pointer hover:bg-black/60">
-                <div className="left flex items-start gap-2">
-                  <div className="flex-shrink-0 h-[40px] w-[40px] rounded-full flex items-center justify-center bg-white/50">
-                    {sendSvg}
-                  </div>
-
-                  <div className="content">
-                    <h4 className="m-0 font-medium ">Send to wallet 23**55</h4>
-
-                    <p className={`m-0 font-medium text-xs text-yellow-500`}>
-                      Pending
+          ) : btcTransactions.length > 0 ? (
+            <div className="bg-black/5 lg:p-4 rounded-lg p-3">
+              {Object.entries(transactionsByDate).map(([date, txs]) => {
+                return (
+                  <div key={date} className="py-3">
+                    <p className="m-0 text-white text-xs font-semibold pb-2">
+                      {date}
                     </p>
+                    <div className="grid gap-3 grid-cols-12">
+                      {txs.map((tx, key) => (
+                        <div key={key} className="md:col-span-6 col-span-12">
+                          <div
+                            onClick={() => handleTransactionClick(tx)}
+                            className="bg-white/5 p-3 rounded-lg flex items-start gap-2 justify-between cursor-pointer hover:bg-black/60"
+                          >
+                            <div className="left flex items-start gap-2">
+                              <div className="flex-shrink-0 h-[40px] w-[40px] rounded-full flex items-center justify-center bg-white/50">
+                                {tx.type === "send" ? sendSvg : receiveSvg}
+                              </div>
+                              <div className="content">
+                                <h4 className="m-0 font-bold md:text-base">
+                                  {tx.type === "send" ? "Send" : "Receive"} SATS
+                                </h4>
+                                <p
+                                  className={`m-0 ${getStatusColor(
+                                    tx.status
+                                  )} font-medium text-xs`}
+                                >
+                                  {getStatusText(tx.status)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="right">
+                              <p className="m-0 text-xs font-medium">
+                                {tx.amount}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-
-                <div className="right">
-                  <p className="m-0 text-xs font-medium">-1.33</p>
-                </div>
-              </div>
+                );
+              })}
             </div>
-            <div className="md:col-span-6 col-span-12">
-              <div className="bg-white/5 p-3 rounded-lg flex items-start gap-2 justify-between cursor-pointer hover:bg-black/60">
-                <div className="left flex items-start gap-2">
-                  <div className="flex-shrink-0 h-[40px] w-[40px] rounded-full flex items-center justify-center bg-white/50">
-                    {sendSvg}
-                  </div>
-
-                  <div className="content">
-                    <h4 className="m-0 font-medium ">Send to wallet 23**55</h4>
-
-                    <p className={`m-0 font-medium text-xs text-green-500`}>
-                      Confirmed
-                    </p>
-                  </div>
-                </div>
-
-                <div className="right">
-                  <p className="m-0 text-xs font-medium">-1.33</p>
-                </div>
-              </div>
-            </div>
-            <div className="md:col-span-6 col-span-12">
-              <div className="bg-white/5 p-3 rounded-lg flex items-start gap-2 justify-between cursor-pointer hover:bg-black/60">
-                <div className="left flex items-start gap-2">
-                  <div className="flex-shrink-0 h-[40px] w-[40px] rounded-full flex items-center justify-center bg-white/50">
-                    {sendSvg}
-                  </div>
-
-                  <div className="content">
-                    <h4 className="m-0 font-medium ">Send to wallet 23**55</h4>
-
-                    <p className={`m-0 font-medium text-xs text-yellow-500`}>
-                      Pending
-                    </p>
-                  </div>
-                </div>
-
-                <div className="right">
-                  <p className="m-0 text-xs font-medium">-1.33</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          ) : (
+            // <div className="text-center">No paid invoices</div>
+            <Image
+              src={process.env.NEXT_PUBLIC_IMAGE_URL + "noData.png"}
+              alt=""
+              height={10000}
+              width={10000}
+              style={{ maxHeight: 400 }}
+              className="max-w-full h-auto w-auto mx-auto"
+            />
+          )}
         </div>
       </div>
     </>
@@ -148,41 +306,6 @@ const crossIcn = (
           fill="var(--textColor)"
           transform="translate(0.564453)"
         ></rect>
-      </clipPath>
-    </defs>
-  </svg>
-);
-
-const qrIcn = (
-  <svg
-    width="150"
-    height="150"
-    viewBox="0 0 96 96"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <g clip-path="url(#clip0_23_10)">
-      <path d="M12 12H24V24H12V12Z" fill="black" />
-      <path
-        d="M36 0V36H0V0H36ZM30 6H6V30H30V6ZM24 72H12V84H24V72Z"
-        fill="black"
-      />
-      <path
-        d="M36 60V96H0V60H36ZM6 66V90H30V66H6ZM72 12H84V24H72V12Z"
-        fill="black"
-      />
-      <path
-        d="M60 0V36H96V0H60ZM90 6V30H66V6H90ZM48 6V0H54V12H48V24H42V6H48ZM48 36V24H54V36H48ZM36 48V42H42V36H48V48H54V42H84V48H60V54H42V48H36ZM36 48V54H12V48H6V54H0V42H18V48H36ZM96 54H90V42H96V54ZM90 54H84V66H96V60H90V54ZM66 54H78V60H72V66H66V54ZM78 72V66H72V72H66V78H54V84H72V72H78ZM78 72H96V78H84V84H78V72ZM54 66V72H60V60H42V66H54Z"
-        fill="black"
-      />
-      <path
-        d="M42 72H48V90H72V96H42V72ZM96 84V96H78V90H90V84H96Z"
-        fill="black"
-      />
-    </g>
-    <defs>
-      <clipPath id="clip0_23_10">
-        <rect width="96" height="96" fill="white" />
       </clipPath>
     </defs>
   </svg>
