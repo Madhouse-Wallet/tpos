@@ -16,60 +16,46 @@ import Lottie from "lottie-react";
 const LottieComponent = ({ animation, onInputReceived, onClose }) => {
   const inputRef = useRef(null);
   const timeoutRef = useRef(null);
+  const inputTimeoutRef = useRef(null); // NEW: for 5-second inactivity timeout
+  const lastInputValueRef = useRef(""); // Track the latest value
 
   useEffect(() => {
-    // Focus the input when component mounts
     if (inputRef.current) {
       inputRef.current.focus();
     }
 
-    // Set timeout for 20 seconds
     timeoutRef.current = setTimeout(() => {
-      console.log("Timeout reached, closing modal");
       if (onClose) {
         onClose();
       }
-    }, 20000); // 20 seconds
+    }, 20000); // 20s modal timeout
 
-    // Cleanup timeout on unmount
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      clearTimeout(timeoutRef.current);
+      clearTimeout(inputTimeoutRef.current); // Clear input timeout on unmount
     };
   }, [onClose]);
 
+  const triggerInputReceived = () => {
+    const value = lastInputValueRef.current.trim();
+    if (value.length > 0 && onInputReceived) {
+      onInputReceived(value);
+    }
+  };
+
   const handleInputChange = (e) => {
     const value = e.target.value;
+    lastInputValueRef.current = value;
 
-    // If input has value and Enter is pressed or after certain length
-    if (value.trim().length > 0) {
-      // Clear the timeout since we got input
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      // Call the callback with the input value
-      if (onInputReceived) {
-        onInputReceived(value);
-      }
-    }
+    // Clear and reset the 5-second inactivity timer
+    clearTimeout(inputTimeoutRef.current);
+    inputTimeoutRef.current = setTimeout(triggerInputReceived, 5000);
   };
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
-      const value = e.target.value;
-      if (value.trim().length > 0) {
-        // Clear the timeout since we got input
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-
-        // Call the callback with the input value
-        if (onInputReceived) {
-          onInputReceived(value);
-        }
-      }
+      clearTimeout(inputTimeoutRef.current);
+      triggerInputReceived();
     }
   };
 
@@ -77,7 +63,6 @@ const LottieComponent = ({ animation, onInputReceived, onClose }) => {
     <div className="relative" style={{ height: 600, width: 600 }}>
       <Lottie animationData={animation} loop={true} />
 
-      {/* Hidden input field that remains active */}
       <input
         ref={inputRef}
         type="text"
@@ -101,7 +86,6 @@ const LottieComponent = ({ animation, onInputReceived, onClose }) => {
         autoFocus
       />
 
-      {/* Optional: Add a subtle indicator that input is being listened for */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm opacity-70">
         Listening for input... (20s timeout)
       </div>
