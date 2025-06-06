@@ -1,12 +1,6 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { logIn } from "./lnbits"; // Reuse your existing login function
-import { getPayments } from "./lnbits";
+import { getTposTrxn } from "../../lib/apiCall";
 
-// Main handler
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -20,30 +14,53 @@ export default async function handler(
         .json({ status: "failure", message: "walletId is required" });
     }
 
-    // Always use type = 2 as requested
-    const loginResponse = (await logIn(1)) as any;
-    const token = loginResponse?.data?.token;
-    if (!token) {
-      return res
-        .status(401)
-        .json({ status: "failure", message: "Token fetch failed" });
-    }
-
-    const result = await getPayments(
+    // Call the external API
+    const apiResponse = await getTposTrxn({
       walletId,
-      token,
-      1,
       fromDate,
       toDate,
       tag,
-      apiKey
-    );
+      apiKey,
+    });
 
-    if (result.status) {
-      return res.status(200).json({ status: "success", data: result.data });
-    } else {
-      return res.status(400).json({ status: "failure", message: result.msg });
+    // Check if the API call failed
+    if (!apiResponse || apiResponse === false) {
+      return res.status(500).json({
+        status: "failure",
+        message: "Failed to fetch transaction data from external API",
+      });
     }
+
+    // Check if the API returned an error
+    if (apiResponse.error) {
+      return res.status(400).json({
+        status: "failure",
+        message: apiResponse.error,
+      });
+    }
+
+    // Check if the API response indicates success
+    if (apiResponse.status !== "success") {
+      return res.status(400).json({
+        status: "failure",
+        message:
+          apiResponse.message || "External API did not return success status",
+      });
+    }
+
+    // Check if data exists
+    if (!apiResponse.data) {
+      return res.status(500).json({
+        status: "failure",
+        message: "No transaction data returned from external API",
+      });
+    }
+
+    // Return the same format as your original code
+    return res.status(200).json({
+      status: "success",
+      data: apiResponse.data,
+    });
   } catch (error) {
     console.error("API Error in getPayments handler:", error);
     return res.status(500).json({ error: "Internal server error" });

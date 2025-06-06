@@ -76,7 +76,7 @@ const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
         }
       } else {
         // Call /api/lnbits-transaction-bitcoin with lnbitAdminKey_2
-        const response = await fetch("/api/lnbits-transaction-bitcoin", {
+        const response = await fetch("/api/lnbits-transaction", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
