@@ -59,9 +59,10 @@ export const payInvoice = async (invoice, address) => {
   }
 };
 
-export const getUserByWallet = async (walletAddress) => {
+export const getUserByEmail = async (email) => {
   try {
-    const response = await fetch(`/api/users/${walletAddress}`, {
+    console.log("Fetching user by email:", email);
+    const response = await fetch(`/api/userDetail?email=${email}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -76,15 +77,15 @@ export const getUserByWallet = async (walletAddress) => {
     const data = await response.json();
     return data.user;
   } catch (error) {
-    console.error("Error fetching user by wallet:", error);
+    console.error("Error fetching user by email:", error);
     throw error;
   }
 };
 
-export const getUserByEmail = async (email) => {
+export const getUserByWallet = async (wallet) => {
   try {
-    console.log("line-121", email);
-    const response = await fetch(`/api/userDetail/${email}`, {
+    console.log("Fetching user by wallet:", wallet);
+    const response = await fetch(`/api/userDetail?wallet=${wallet}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -99,7 +100,30 @@ export const getUserByEmail = async (email) => {
     const data = await response.json();
     return data.user;
   } catch (error) {
-    console.error("Error fetching user by wallet:", error);
+    console.error("Error fetching user by wallet ID:", error);
+    throw error;
+  }
+};
+
+export const getUserByTposID = async (tposId) => {
+  try {
+    console.log("Fetching user by tposId:", tposId);
+    const response = await fetch(`/api/userDetail?tposId=${tposId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch user details");
+    }
+
+    const data = await response.json();
+    return data.user;
+  } catch (error) {
+    console.error("Error fetching user by tpos ID:", error);
     throw error;
   }
 };

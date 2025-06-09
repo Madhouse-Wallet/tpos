@@ -1,19 +1,41 @@
-import { getUser } from "../../../lib/apiCall";
+import { getUser } from "../../lib/apiCall";
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const { wallet } = req.query;
-    console.log("wallet", wallet);
+    const { email, wallet, tposId } = req.query;
+    console.log("Query params:", { email, wallet, tposId });
 
-    if (!wallet) {
-      return res.status(400).json({ error: "wallet is required" });
+    // Check if at least one identifier is provided
+    if (!email && !wallet && !tposId) {
+      return res.status(400).json({
+        error:
+          "At least one identifier is required (email, wallet, or tposId)",
+      });
     }
 
+    // Determine which parameter to use (priority: email > wallet > tposId)
+    let userParam = {};
+    let identifierType = "";
+
+    if (email) {
+      userParam = { email };
+      identifierType = "email";
+    } else if (wallet) {
+      userParam = { wallet };
+      identifierType = "wallet";
+    } else if (tposId) {
+      userParam = { tposId };
+      identifierType = "tposId";
+    }
+
+    console.log(`Using ${identifierType}:`, userParam);
+
     // Call the external API
-    const apiResponse = await getUser({ wallet });
+    const apiResponse = await getUser(userParam);
 
     // Check if the API call failed
     if (!apiResponse || apiResponse === false) {
@@ -25,8 +47,13 @@ export default async function handler(req, res) {
     // Check if the API returned an error
     if (apiResponse.error) {
       // Handle different error cases based on the API response
-      if (apiResponse.error === "User not found for this wallet") {
-        return res.status(404).json({ error: "User not found for this wallet" });
+      if (
+        apiResponse.error === "User not found for this email" ||
+        apiResponse.error.includes("User not found")
+      ) {
+        return res.status(404).json({
+          error: `User not found for this ${identifierType}`,
+        });
       }
 
       return res.status(400).json({

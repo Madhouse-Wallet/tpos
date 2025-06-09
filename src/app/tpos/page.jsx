@@ -10,6 +10,7 @@ import QRCode from "qrcode";
 import {
   createTposInvoice,
   getUserByEmail,
+  getUserByTposID,
   getUserByWallet,
   payInvoice,
 } from "../../services/apiService";
@@ -65,14 +66,20 @@ const Tpos = () => {
     const url = new URL(window.location.href);
 
     const id = params.tpoId || params.id || url.searchParams.get("id");
-    const email = params.email || url.searchParams.get("email");
-    const wallet = params.walletId || url.searchParams.get("walletId");
-
-    if (id) setTpoId(id);
-    if (email) setEmail(email);
-    if (wallet) setWalletId(wallet);
+    console.log("line-69", id);
 
     const userData = async () => {
+      const apiResponse = await getUserByTposID(id);
+      console.log("line-74", apiResponse);
+      if (!apiResponse) {
+        return;
+      }
+      const email = apiResponse?.email;
+      const wallet = apiResponse?.lnbitWalletId;
+      if (id) setTpoId(id);
+      if (email) setEmail(email);
+      if (wallet) setWalletId(wallet);
+
       if (!email) {
         return;
       }
@@ -353,10 +360,10 @@ const Tpos = () => {
               <span className="font-bold themeClr">{emailIcn}</span>{" "}
               {email || "not found"}
             </li>
-            <li className="py-1 flex items-center gap-1">
+            {/* <li className="py-1 flex items-center gap-1">
               <span className="font-bold themeClr">{walletIcn}</span>{" "}
               {walletId || "not found"}
-            </li>
+            </li> */}
           </ul>
         </div>
         <div className="container px-3 h-full">

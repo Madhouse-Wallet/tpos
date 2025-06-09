@@ -128,7 +128,7 @@ const PaymentPopup = ({
                   </h4>
                   <h4 className="m-0 font-medium text-xl">
                     {formatCurrency(amount)}
-                    <span className="text-xs">(+ 1 tip)</span>
+                    {/* <span className="text-xs">(+ 1 tip)</span> */}
                   </h4>
                   <p className="m-0 text-[#838383] text-xs">
                     {memo ? memo : "TPOS Madhouse Wallet"}

@@ -5,7 +5,6 @@ import { Inter } from "next/font/google";
 import moment from "moment";
 import LnbitsTransactionDetail from "../../../pages/TransactionDetail/LnbitsTransactionDetail";
 
-
 const oxanium = Inter({
   subsets: ["latin"],
   weight: ["200", "300", "400", "500", "600", "700", "800"], // pick what you need
@@ -19,7 +18,6 @@ const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
   const [detail, setDetail] = useState(false);
   const [transactionData, setTransactionData] = useState(null);
   const [loading, setLoading] = useState(false);
-
 
   const formatBitcoinTransactionData = (txs) => {
     return txs.map((tx) => {
@@ -42,6 +40,7 @@ const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
             : `Received ${amount.toFixed(2)} sats`),
         category: "payment",
         rawData: tx,
+        day: moment(tx.time).format("MMMM D, YYYY h:mm A"),
       };
     });
   };
@@ -215,7 +214,7 @@ const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
           className="absolute inset-0 backdrop-blur-xl"
         ></div>
         <div
-          className={`modalDialog relative p-3 lg:p-6 mx-auto w-full rounded-[20px] z-10 overflow-scroll border border-[#dddddd21] bg-[#00000099] no-scrollbar max-w-[700px]`}
+          className={`modalDialog relative p-3 lg:p-6 mx-auto w-full rounded-[20px] z-10 overflow-scroll border border-[#dddddd21] bg-[#00000099] no-scrollbar max-w-[1000px]`}
         >
           <div className="top pb-4">
             <h4 className="m-0 font-bold text-2xl">Transaction History</h4>
@@ -257,9 +256,12 @@ const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
                                 </p>
                               </div>
                             </div>
-                            <div className="right">
-                              <p className="m-0 text-xs font-medium">
-                                {tx.amount}
+                            <div className="right text-right">
+                              <p className="m-0 text-xs font-medium py-1">
+                                {parseFloat(tx.amount) / 1000}
+                              </p>
+                              <p className="m-0 text-xs font-medium py-1">
+                                {tx.day}
                               </p>
                             </div>
                           </div>
