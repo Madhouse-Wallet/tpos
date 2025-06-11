@@ -14,6 +14,7 @@ import {
   getUserByWallet,
   payInvoice,
 } from "../../services/apiService";
+import { filterHexInput } from "../../utils/helper";
 
 const Tpos = () => {
   const [amount, setAmount] = useState("");
@@ -230,8 +231,20 @@ const Tpos = () => {
     setAmount((prev) => prev.slice(0, -1));
   };
 
+  // const handleMemoChange = (e) => {
+  //   setMemo(e.target.value);
+  // };
+
   const handleMemoChange = (e) => {
-    setMemo(e.target.value);
+    const value = e.target.value;
+
+    // const filteredValue = value.replace(/[^0-9a-fA-Fx]/g, "");
+    // Filter out invalid characters instead of blocking the entire input
+    const filteredValue = filterHexInput(value, /[^a-zA-Z0-9 ]/g, 100);
+    console.log("line-127", filteredValue.length);
+
+    // Update the address value with filtered input
+    setMemo(filteredValue);
   };
 
   const tabData = [
