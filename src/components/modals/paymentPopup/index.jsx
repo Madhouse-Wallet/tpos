@@ -114,8 +114,8 @@ const PaymentPopup = ({
                         src={qrCodeImage}
                         height={10000}
                         width={10000}
-                        className="max-w-full mx-auto h-auto w-auto"
-                        style={{ height: 150 }}
+                         className="max-w-full md:h-[230px] md:w-auto w-full mx-auto h-auto w-auto"
+                        // style={{ height: 150 }}
                       />
                     </>
                   )}

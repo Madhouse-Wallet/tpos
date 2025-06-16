@@ -164,7 +164,7 @@ const Tpos = () => {
       const response = await createTposInvoice(
         tpoId,
         sats,
-        memo || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
+        getInternalMemo() || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
         existingUser?.lnaddress,
         {}
       );
@@ -193,7 +193,9 @@ const Tpos = () => {
 
   const generateQRCode = async (paymentRequest) => {
     try {
-      const qr = await QRCode.toDataURL(paymentRequest);
+      const qr = await QRCode.toDataURL(paymentRequest, {
+        margin: 0.5,
+      });
       setQrCodeImage(qr);
       setPaymentPop(true);
     } catch (err) {
@@ -275,7 +277,7 @@ const Tpos = () => {
       const response = await createTposInvoice(
         tpoId,
         sats,
-        memo || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
+        getInternalMemo() || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
         process.env.NEXT_PUBLIC_TPOS_LNURL,
         {}
       );
@@ -296,6 +298,14 @@ const Tpos = () => {
       // Tap to Pay tab - start Ethereum tap to pay
       startTapToPay();
     }
+  };
+
+  const getInternalMemo = () => {
+    const merchantInfo = `Merchant: ${email}`;
+    if (memo.trim()) {
+      return `${memo} - ${merchantInfo}`;
+    }
+    return merchantInfo;
   };
 
   return (
