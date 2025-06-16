@@ -1,4 +1,4 @@
-import { createTposInvoice } from "../../lib/apiCall";
+import { createTposInvoice, lambdaInvokeFunction } from "../../lib/apiCall";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -25,13 +25,21 @@ export default async function handler(req, res) {
     }
 
     // Call the external API
-    const apiResponse = await createTposInvoice({
+    const apiResponse = await lambdaInvokeFunction({
       tpoId,
       amount,
       memo,
       userLnaddress,
       details,
-    });
+    },"madhouse-backend-production-createTposIdInvoice")
+    console.log("apiResponse-->,",apiResponse)
+    // const apiResponse = await createTposInvoice({
+    //   tpoId,
+    //   amount,
+    //   memo,
+    //   userLnaddress,
+    //   details,
+    // });
 
     // Check if the API call failed
     if (!apiResponse || apiResponse === false) {

@@ -1,4 +1,4 @@
-import { payTposInvoice } from "../../lib/apiCall";
+import { lambdaInvokeFunction } from "../../lib/apiCall";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
@@ -17,10 +17,17 @@ export default async function handler(req: any, res: any) {
     }
 
     // Call the external API
-    const apiResponse = await payTposInvoice({
+
+
+    const apiResponse = await lambdaInvokeFunction({
       invoice,
       address,
-    });
+    }, "madhouse-backend-production-payTposInvoice")
+    console.log("apiResponse-->",apiResponse)
+    // const apiResponse = await payTposInvoice({
+    //   invoice,
+    //   address,
+    // });
 
     // Check if the API call failed
     if (!apiResponse || apiResponse === false) {

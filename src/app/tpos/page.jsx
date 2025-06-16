@@ -177,8 +177,15 @@ const Tpos = () => {
 
       console.log("Payment result:", result);
 
-      setPaymentSuccess(true);
-      setShowLoader(false);
+      if (result.status === "failure") {
+        setError(`Payment failed: ${result.message}`);
+        setShowLoader(false);
+      } else {
+        setPaymentSuccess(true);
+        setShowLoader(false);
+      }
+
+
 
       // Hide success popup after 8 seconds
       setTimeout(() => {
@@ -408,11 +415,10 @@ const Tpos = () => {
                       <button
                         key={key}
                         onClick={() => handleTab(key)}
-                        className={`${
-                          tab == key
+                        className={`${tab == key
                             ? "opacity-100 bg-[#ea611d] text-white"
                             : "text-black bg-[#ddd]"
-                        } flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl text-[14px] p-3`}
+                          } flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl text-[14px] p-3`}
                       >
                         {item.title}
                       </button>

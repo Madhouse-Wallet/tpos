@@ -1,4 +1,4 @@
-import { getUser } from "../../lib/apiCall";
+import { getUser, lambdaInvokeFunction } from "../../lib/apiCall";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -35,8 +35,8 @@ export default async function handler(req, res) {
     console.log(`Using ${identifierType}:`, userParam);
 
     // Call the external API
-    const apiResponse = await getUser(userParam);
-
+    // const apiResponse = await getUser(userParam);
+  const apiResponse = await lambdaInvokeFunction(userParam, "madhouse-backend-production-getUser")
     // Check if the API call failed
     if (!apiResponse || apiResponse === false) {
       return res.status(500).json({

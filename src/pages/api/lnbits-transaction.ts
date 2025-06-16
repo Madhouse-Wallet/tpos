@@ -1,4 +1,4 @@
-import { getTposTrxn } from "../../lib/apiCall";
+import { lambdaInvokeFunction } from "../../lib/apiCall";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
@@ -15,13 +15,23 @@ export default async function handler(req: any, res: any) {
     }
 
     // Call the external API
-    const apiResponse = await getTposTrxn({
-      walletId,
+
+    const apiResponse = await lambdaInvokeFunction({
+       walletId,
       fromDate,
       toDate,
       tag,
       apiKey,
-    });
+    }, "madhouse-backend-production-getTposTrxn")
+
+
+    // const apiResponse = await getTposTrxn({
+    //   walletId,
+    //   fromDate,
+    //   toDate,
+    //   tag,
+    //   apiKey,
+    // });
 
     // Check if the API call failed
     if (!apiResponse || apiResponse === false) {
