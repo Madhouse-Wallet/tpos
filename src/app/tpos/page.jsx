@@ -17,6 +17,7 @@ import {
 import { filterHexInput } from "../../utils/helper";
 
 const Tpos = () => {
+  const [activeIndex, setActiveIndex] = useState(null);
   const [amount, setAmount] = useState("");
   const [memo, setMemo] = useState("");
   const [tab, setTab] = useState(0);
@@ -185,8 +186,6 @@ const Tpos = () => {
         setShowLoader(false);
       }
 
-
-
       // Hide success popup after 8 seconds
       setTimeout(() => {
         setPaymentSuccess(false);
@@ -211,13 +210,18 @@ const Tpos = () => {
     }
   };
 
-  const handleClick = (digit) => {
-    // Prevent more than 9 digits
+  const handleClick = (digit, index) => {
     if (amount.length >= 9) return;
+
     const newAmount = amount + digit;
     setAmount(newAmount);
-  };
 
+    // Set active index for black background flash
+    setActiveIndex(digit);
+    setTimeout(() => {
+      setActiveIndex(null);
+    }, 150); // flash for 150ms
+  };
   const formatCurrency = (value) => {
     const cents = value.padStart(3, "0"); // ensure at least 3 digits
     const dollars = cents.slice(0, -2);
@@ -234,10 +238,18 @@ const Tpos = () => {
 
   const handleClear = () => {
     setAmount("");
+    setActiveIndex("clear");
+    setTimeout(() => {
+      setActiveIndex(null);
+    }, 150);
   };
 
   const handleBackspace = () => {
     setAmount((prev) => prev.slice(0, -1));
+    setActiveIndex("backspace");
+    setTimeout(() => {
+      setActiveIndex(null);
+    }, 150);
   };
 
   // const handleMemoChange = (e) => {
@@ -305,6 +317,11 @@ const Tpos = () => {
       // Tap to Pay tab - start Ethereum tap to pay
       startTapToPay();
     }
+
+    setActiveIndex("ok");
+    setTimeout(() => {
+      setActiveIndex(null);
+    }, 150);
   };
 
   const getInternalMemo = () => {
@@ -415,10 +432,11 @@ const Tpos = () => {
                       <button
                         key={key}
                         onClick={() => handleTab(key)}
-                        className={`${tab == key
+                        className={`${
+                          tab == key
                             ? "opacity-100 bg-[#ea611d] text-white"
                             : "text-black bg-[#ddd]"
-                          } flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl text-[14px] p-3`}
+                        } flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl text-[14px] p-3`}
                       >
                         {item.title}
                       </button>
@@ -435,11 +453,13 @@ const Tpos = () => {
                   </div>
                 </div>
                 <div className="keyPad w-full grid gap-2 grid-cols-4 grid-rows-4 min-h-[40vh] p-3 max-w-[600px] mx-auto">
-                  {["1", "2", "3", "4", "5", "6"].map((val) => (
+                  {["1", "2", "3", "4", "5", "6"].map((val, index) => (
                     <button
                       key={val}
-                      onClick={() => handleClick(val)}
-                      className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-[40px] transition duration-[400ms] hover:bg-[#000] min-h-[55px] h-full"
+                      onClick={() => handleClick(val, index)}
+                      className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
+                        activeIndex === val ? "bg-[#000]" : "bg-[#ea611d]"
+                      }`}
                     >
                       {val}
                     </button>
@@ -448,16 +468,20 @@ const Tpos = () => {
                   {/* OK Button */}
                   <button
                     onClick={handleOkClick}
-                    className="row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold bg-green-500 items-center justify-center rounded-xl transition duration-[400ms] hover:bg-[#000]"
+                    className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold bg-green-500 items-center justify-center rounded-xl transition duration-[400ms] ${
+                      activeIndex === "ok" ? "bg-[#000]" : "bg-[#ea611d]"
+                    }`}
                   >
                     OK
                   </button>
 
-                  {["7", "8", "9"].map((val) => (
+                  {["7", "8", "9"].map((val, index) => (
                     <button
                       key={val}
-                      onClick={() => handleClick(val)}
-                      className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-[40px] transition duration-[400ms] hover:bg-[#000]"
+                      onClick={() => handleClick(val, index)}
+                      className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
+                        activeIndex === val ? "bg-[#000]" : "bg-[#ea611d]"
+                      }`}
                     >
                       {val}
                     </button>
@@ -466,7 +490,9 @@ const Tpos = () => {
                   {/* Clear Button */}
                   <button
                     onClick={handleClear}
-                    className="flex text-xl text-white font-semibold bg-red-500 items-center justify-center rounded-[40px] transition duration-[400ms] hover:bg-[#000]"
+                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
+                      activeIndex === "clear" ? "bg-[#000]" : "bg-[#ea611d]"
+                    }`}
                   >
                     C
                   </button>
@@ -474,7 +500,9 @@ const Tpos = () => {
                   {/* 0 Button */}
                   <button
                     onClick={() => handleClick("0")}
-                    className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-[40px] transition duration-[400ms] hover:bg-[#000]"
+                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
+                      activeIndex === "0" ? "bg-[#000]" : "bg-[#ea611d]"
+                    }`}
                   >
                     0
                   </button>
@@ -482,7 +510,9 @@ const Tpos = () => {
                   {/* Backspace Button */}
                   <button
                     onClick={handleBackspace}
-                    className="flex text-xl text-white font-semibold bg-[#ea611d] items-center justify-center rounded-[40px] transition duration-[400ms] hover:bg-[#000]"
+                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
+                      activeIndex === "backspace" ? "bg-[#000]" : "bg-[#ea611d]"
+                    }`}
                   >
                     {backIcn}
                   </button>
