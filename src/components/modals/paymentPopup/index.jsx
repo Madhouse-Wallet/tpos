@@ -2,8 +2,6 @@ import Image from "next/image";
 import React, { useRef, useState, useEffect } from "react";
 import { Inter } from "next/font/google";
 
-
-
 const oxanium = Inter({
   subsets: ["latin"],
   weight: ["200", "300", "400", "500", "600", "700", "800"], // pick what you need
@@ -20,8 +18,9 @@ const PaymentPopup = ({
   memo,
   walletId,
   email,
+  sats,
 }) => {
-  console.log("tpoId", tpoId);
+  console.log("tpoId", tpoId, amount);
   const [copied, setCopied] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const socketRef = useRef(null);
@@ -73,7 +72,9 @@ const PaymentPopup = ({
 
   return (
     <>
-      <div className={`${oxanium.className} fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]`}>
+      <div
+        className={`${oxanium.className} fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]`}
+      >
         <button
           onClick={() => setPaymentPop(!paymentPop)}
           className="bg-black/50 h-10 w-10 items-center rounded-full p-0 absolute mx-auto left-0 right-0 bottom-10 z-[99999] inline-flex justify-center border border-[#5f5f5f59]"
@@ -114,7 +115,7 @@ const PaymentPopup = ({
                         src={qrCodeImage}
                         height={10000}
                         width={10000}
-                         className="max-w-full md:h-[230px] md:w-auto w-full mx-auto h-auto w-auto"
+                        className="max-w-full md:h-[230px] md:w-auto w-full mx-auto h-auto w-auto"
                         // style={{ height: 150 }}
                       />
                     </>
@@ -127,7 +128,7 @@ const PaymentPopup = ({
                     {formatCurrency(amount)}
                   </h4>
                   <h4 className="m-0 font-medium text-xl">
-                    {formatCurrency(amount)}
+                    {sats}
                     {/* <span className="text-xs">(+ 1 tip)</span> */}
                   </h4>
                   <p className="m-0 text-[#838383] text-xs">

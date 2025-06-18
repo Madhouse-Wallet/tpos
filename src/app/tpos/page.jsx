@@ -346,6 +346,7 @@ const Tpos = () => {
             memo={memo}
             walletId={walletId}
             email={email}
+            sats={sats}
           />,
           document.body
         )}
