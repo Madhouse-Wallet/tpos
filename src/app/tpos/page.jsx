@@ -332,6 +332,8 @@ const Tpos = () => {
     return merchantInfo;
   };
 
+  console.log(activeIndex, "activehover");
+
   return (
     <>
       {paymentPop &&
@@ -468,8 +470,8 @@ const Tpos = () => {
                   {/* OK Button */}
                   <button
                     onClick={handleOkClick}
-                    className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold bg-green-500 items-center justify-center rounded-xl transition duration-[400ms] ${
-                      activeIndex === "ok" ? "bg-[#000]" : "bg-[#ea611d]"
+                    className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold items-center justify-center rounded-xl transition duration-[400ms] ${
+                      activeIndex === "ok" ? "bg-[#000]" : "bg-green-500 "
                     }`}
                   >
                     OK
