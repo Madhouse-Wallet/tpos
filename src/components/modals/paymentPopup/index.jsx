@@ -1,6 +1,7 @@
 import Image from "next/image";
 import React, { useRef, useState, useEffect } from "react";
 import { Inter } from "next/font/google";
+import { fundTrnsfer } from "../../../services/apiService";
 
 const oxanium = Inter({
   subsets: ["latin"],
@@ -36,6 +37,7 @@ const PaymentPopup = ({
       const data = JSON.parse(event.data);
       console.log("line-25", data);
       if (data.status === "success") {
+        fundTrnsfer(walletId, tpoId);
         setPaymentSuccess(true);
 
         setTimeout(() => {

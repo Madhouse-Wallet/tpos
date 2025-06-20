@@ -15,7 +15,7 @@ import {
   payInvoice,
 } from "../../services/apiService";
 import { filterHexInput } from "../../utils/helper";
-
+import { fundTrnsfer } from "../../services/apiService";
 const Tpos = () => {
   const [activeIndex, setActiveIndex] = useState(null);
   const [amount, setAmount] = useState("");
@@ -95,6 +95,23 @@ const Tpos = () => {
 
     userData();
   }, [params]);
+
+  // const fundTransfer = async (walletId, tpoId) => {
+  //   try {
+  //     const responseDt = await fundTrnsfer(walletId, tpoId);
+  //     console.log("responseDt-->", responseDt)
+  //   } catch (error) {
+  //     console.log("fundTransfer error-->", error)
+  //   }
+  // }
+
+  // useEffect(() => {
+  //   try {
+  //     fundTransfer("0x27eD98c4596a93Cf3B6caD3B3E91Fa321aBf63C5","RbtmMvxzoCSBPnkQhew3oD")
+  //   } catch (error) {
+  //     console.log("error-->", error)
+  //   }
+  // }, [])
 
   // Ethereum address validation
   const isValidEthereumAddress = (address) => {
@@ -433,11 +450,10 @@ const Tpos = () => {
                       <button
                         key={key}
                         onClick={() => handleTab(key)}
-                        className={`${
-                          tab == key
-                            ? "opacity-100 bg-[#ea611d] text-white"
-                            : "text-black bg-[#ddd]"
-                        } flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl text-[14px] p-3`}
+                        className={`${tab == key
+                          ? "opacity-100 bg-[#ea611d] text-white"
+                          : "text-black bg-[#ddd]"
+                          } flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl text-[14px] p-3`}
                       >
                         {item.title}
                       </button>
@@ -458,9 +474,8 @@ const Tpos = () => {
                     <button
                       key={val}
                       onClick={() => handleClick(val, index)}
-                      className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
-                        activeIndex === val ? "bg-[#000]" : "bg-[#ea611d]"
-                      }`}
+                      className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${activeIndex === val ? "bg-[#000]" : "bg-[#ea611d]"
+                        }`}
                     >
                       {val}
                     </button>
@@ -469,9 +484,8 @@ const Tpos = () => {
                   {/* OK Button */}
                   <button
                     onClick={handleOkClick}
-                    className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold bg-green-500 items-center justify-center rounded-xl transition duration-[400ms] ${
-                      activeIndex === "ok" ? "bg-[#000]" : "bg-[#ea611d]"
-                    }`}
+                    className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold bg-green-500 items-center justify-center rounded-xl transition duration-[400ms] ${activeIndex === "ok" ? "bg-[#000]" : "bg-[#ea611d]"
+                      }`}
                   >
                     OK
                   </button>
@@ -480,9 +494,8 @@ const Tpos = () => {
                     <button
                       key={val}
                       onClick={() => handleClick(val, index)}
-                      className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
-                        activeIndex === val ? "bg-[#000]" : "bg-[#ea611d]"
-                      }`}
+                      className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${activeIndex === val ? "bg-[#000]" : "bg-[#ea611d]"
+                        }`}
                     >
                       {val}
                     </button>
@@ -491,9 +504,8 @@ const Tpos = () => {
                   {/* Clear Button */}
                   <button
                     onClick={handleClear}
-                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
-                      activeIndex === "clear" ? "bg-[#000]" : "bg-[#ea611d]"
-                    }`}
+                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${activeIndex === "clear" ? "bg-[#000]" : "bg-[#ea611d]"
+                      }`}
                   >
                     C
                   </button>
@@ -501,9 +513,8 @@ const Tpos = () => {
                   {/* 0 Button */}
                   <button
                     onClick={() => handleClick("0")}
-                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
-                      activeIndex === "0" ? "bg-[#000]" : "bg-[#ea611d]"
-                    }`}
+                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${activeIndex === "0" ? "bg-[#000]" : "bg-[#ea611d]"
+                      }`}
                   >
                     0
                   </button>
@@ -511,9 +522,8 @@ const Tpos = () => {
                   {/* Backspace Button */}
                   <button
                     onClick={handleBackspace}
-                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
-                      activeIndex === "backspace" ? "bg-[#000]" : "bg-[#ea611d]"
-                    }`}
+                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${activeIndex === "backspace" ? "bg-[#000]" : "bg-[#ea611d]"
+                      }`}
                   >
                     {backIcn}
                   </button>
