@@ -77,17 +77,25 @@ const PaymentPopup = ({
       <div
         className={`${oxanium.className} fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]`}
       >
-        <button
-          onClick={() => setPaymentPop(!paymentPop)}
-          className="bg-black/50 h-10 w-10 items-center rounded-full p-0 absolute mx-auto left-0 right-0 bottom-10 z-[99999] inline-flex justify-center border border-[#5f5f5f59]"
-        >
-          {crossIcn}
-        </button>
         <div
           onClick={handlePaymentPop}
           className="absolute inset-0 backdrop-blur-xl"
         />
-        <div className="modalDialog relative p-3 lg:p-6 mx-auto w-full rounded-[20px] z-10 overflow-scroll border border-[#dddddd21] bg-[#00000099] no-scrollbar max-w-[500px]">
+        <div className="modalDialog relative p-3 pt-[25px] lg:p-6 mx-auto w-full rounded-[20px] z-10 overflow-scroll border border-[#dddddd21] bg-[#00000099] no-scrollbar max-w-[500px]">
+          <button
+            onClick={() => setPaymentPop(!paymentPop)}
+            className=" h-10 w-10 items-center rounded-20 p-0 absolute mx-auto right-0 top-0 z-[99999] inline-flex justify-center"
+            // style={{ border: "1px solid #5f5f5f59" }}
+          >
+            {crossIcn}
+          </button>
+          <button
+            onClick={() => setPaymentPop(!paymentPop)}
+            className=" h-10 w-10 items-center rounded-20 p-0 absolute mx-auto right-0 top-0 z-[99999] inline-flex justify-center"
+            // style={{ border: "1px solid #5f5f5f59" }}
+          >
+            {crossIcn}
+          </button>
           {paymentSuccess ? (
             <>
               <div className="p-[30px]  rounded-xl bg-[#90ad9429]">
