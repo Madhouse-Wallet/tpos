@@ -132,7 +132,7 @@ export const getUserByTposID = async (tposId) => {
 
 // fund-transfer
 export const fundTrnsfer = async (walletId, tpoId) => {
-    try {
+    try { 
     try {
       return await fetch(`/api/fund-transfer`, {
         method: "POST",
