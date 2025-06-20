@@ -18,8 +18,9 @@ const PaymentPopup = ({
   memo,
   walletId,
   email,
+  sats,
 }) => {
-  console.log("tpoId", tpoId);
+  console.log("tpoId", tpoId, amount);
   const [copied, setCopied] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const socketRef = useRef(null);
@@ -86,6 +87,13 @@ const PaymentPopup = ({
           >
             {crossIcn}
           </button>
+          <button
+            onClick={() => setPaymentPop(!paymentPop)}
+            className=" h-10 w-10 items-center rounded-20 p-0 absolute mx-auto right-0 top-0 z-[99999] inline-flex justify-center"
+            // style={{ border: "1px solid #5f5f5f59" }}
+          >
+            {crossIcn}
+          </button>
           {paymentSuccess ? (
             <>
               <div className="p-[30px]  rounded-xl bg-[#90ad9429]">
@@ -128,7 +136,7 @@ const PaymentPopup = ({
                     {formatCurrency(amount)}
                   </h4>
                   <h4 className="m-0 font-medium text-xl">
-                    {formatCurrency(amount)}
+                    {sats}
                     {/* <span className="text-xs">(+ 1 tip)</span> */}
                   </h4>
                   <p className="m-0 text-[#838383] text-xs">
