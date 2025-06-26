@@ -3,6 +3,7 @@ import { logIn, getStats, userLogIn, createSwapReverse, payInvoice } from "./lnb
 import { createBtcToUsdcShift } from "./sideShiftAI";
 import axios from "axios";
 import { sendBitcoinTransaction } from "./sendbitcoin";
+import { calcLnToChainFeeWithReceivedAmount } from "../../utils/helper";
 
 // Define response type for the BlockCypher API
 interface BlockCypherResponse {
@@ -71,11 +72,11 @@ export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { walletId, tpoId } = req.body;
-    if (!walletId) return res.status(400).json({ status: "failure", message: "walletId is required" });
+    const { tpoId } = req.body;
+    if (!tpoId) return res.status(400).json({ status: "failure", message: "tpoId is required" });
 
     console.log("Step 1: Fetching user data from lambda");
-    const userRes = await lambdaInvokeFunction({ wallet: walletId }, "madhouse-backend-production-getUser");
+    const userRes = await lambdaInvokeFunction({ tposId: tpoId }, "madhouse-backend-production-getUser");
     if (userRes?.status !== "success") return res.status(500).json({ error: "Failed to fetch user" });
 
     const user = userRes.data;
@@ -154,9 +155,24 @@ export default async function handler(req: any, res: any) {
     } else if (user.lnbitLinkId_2 === tpoId) {
       console.log("Step 2: Handling Bitcoin flow");
       const stats = await getStats(user.lnbitWalletId_2, masterToken, 1);
+
       if (!stats.status) return res.status(400).json({ status: "failure", message: stats.msg });
 
-      const sats = Math.floor(Number(stats.data?.[0]?.balance || 0) / 1000);
+      let sats = Math.floor(Number(stats.data?.[0]?.balance || 0) / 1000);
+      console.log("calculate balance-", sats);
+      let { boltzFee,
+        platformFee,
+        lockupFee,
+        claimFee,
+        totalFees,
+        amountReceived,
+        swapAmount } = await calcLnToChainFeeWithReceivedAmount(sats) as any;
+      sats = sats - totalFees;
+      console.log("totalFees", totalFees)
+      console.log("-->swapAmount", swapAmount)
+      console.log("amountReceived", amountReceived)
+
+      console.log("calculate sats after fee reduciton-", sats);
       if (sats < 26000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
 
       const btcToken = (await userLogIn(1, user.lnbitId_2))?.data?.token;

@@ -44,6 +44,13 @@ const Tpos = () => {
 
   const [sats, setSats] = useState(null);
 
+
+   useEffect(() => {
+      if (paymentSuccess) {
+        console.log("api hit-->")
+        fundTrnsfer("", tpoId);
+      }
+    }, [paymentSuccess])
   useEffect(() => {
     async function fetchSats() {
       try {
@@ -96,9 +103,10 @@ const Tpos = () => {
     userData();
   }, [params]);
 
-  // const fundTransfer = async (walletId, tpoId) => {
+  // const fundTransfer = async () => {
   //   try {
-  //     const responseDt = await fundTrnsfer(walletId, tpoId);
+  //     console.log("tpoId-->",tpoId)
+  //     const responseDt = await   fundTrnsfer("", tpoId);
   //     console.log("responseDt-->", responseDt)
   //   } catch (error) {
   //     console.log("fundTransfer error-->", error)
@@ -107,11 +115,11 @@ const Tpos = () => {
 
   // useEffect(() => {
   //   try {
-  //     fundTransfer("0x27eD98c4596a93Cf3B6caD3B3E91Fa321aBf63C5","RbtmMvxzoCSBPnkQhew3oD")
+  //     fundTransfer()
   //   } catch (error) {
   //     console.log("error-->", error)
   //   }
-  // }, [])
+  // }, [tpoId])
 
   // Ethereum address validation
   const isValidEthereumAddress = (address) => {

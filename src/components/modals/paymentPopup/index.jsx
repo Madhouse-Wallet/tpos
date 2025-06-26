@@ -26,6 +26,14 @@ const PaymentPopup = ({
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const socketRef = useRef(null);
 
+
+  useEffect(() => {
+    if (paymentSuccess) {
+      console.log("api hit-->")
+      fundTrnsfer(walletId, tpoId);
+    }
+  }, [paymentSuccess])
+
   useEffect(() => {
     if (!invoiceData?.payment_hash) return;
     socketRef.current = new WebSocket(
@@ -37,7 +45,7 @@ const PaymentPopup = ({
       const data = JSON.parse(event.data);
       console.log("line-25", data);
       if (data.status === "success") {
-        fundTrnsfer(walletId, tpoId);
+
         setPaymentSuccess(true);
 
         setTimeout(() => {
@@ -85,14 +93,14 @@ const PaymentPopup = ({
           <button
             onClick={() => setPaymentPop(!paymentPop)}
             className=" h-10 w-10 items-center rounded-20 p-0 absolute mx-auto right-0 top-0 z-[99999] inline-flex justify-center"
-            // style={{ border: "1px solid #5f5f5f59" }}
+          // style={{ border: "1px solid #5f5f5f59" }}
           >
             {crossIcn}
           </button>
           <button
             onClick={() => setPaymentPop(!paymentPop)}
             className=" h-10 w-10 items-center rounded-20 p-0 absolute mx-auto right-0 top-0 z-[99999] inline-flex justify-center"
-            // style={{ border: "1px solid #5f5f5f59" }}
+          // style={{ border: "1px solid #5f5f5f59" }}
           >
             {crossIcn}
           </button>
@@ -126,7 +134,7 @@ const PaymentPopup = ({
                         height={10000}
                         width={10000}
                         className="max-w-full md:h-[230px] md:w-auto w-full mx-auto h-auto w-auto"
-                        // style={{ height: 150 }}
+                      // style={{ height: 150 }}
                       />
                     </>
                   )}
