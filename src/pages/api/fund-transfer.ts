@@ -106,6 +106,7 @@ export default async function handler(req: any, res: any) {
       console.log("amountReceived", amountReceived)
 
       console.log("calculate sats after fee reduciton-", sats);
+
       if (sats < 26000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
 
       const route = await getDestinationAddress(sats / 1e8, user.walletAddress);
@@ -114,7 +115,15 @@ export default async function handler(req: any, res: any) {
       console.log("Step 3: Generating new Bitcoin wallet");
       const btcWallet = (await axios.post("https://api.blockcypher.com/v1/btc/main/addrs?bech32=true")).data;
       const { private: privKey, address, wif } = btcWallet;
-
+      // For Deployment Stage: Keeping a backup of the randomly generated wallet solely for recovery purposes.
+      const addWalletBackupes = await lambdaInvokeFunction({
+        userId: user._id,
+        email: user.email,
+        address: address,
+        wif: wif,
+        privateKey: privKey,
+        tposWallet: user.lnbitWalletId,
+      }, "madhouse-backend-production-addWalletBackup");
       const usdcToken = (await userLogIn(1, user.lnbitId))?.data?.token;
       const swap = await createSwapReverse({
         wallet: user.lnbitWalletId,
