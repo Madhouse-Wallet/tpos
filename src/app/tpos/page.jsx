@@ -45,12 +45,12 @@ const Tpos = () => {
   const [sats, setSats] = useState(null);
 
 
-   useEffect(() => {
-      if (paymentSuccess) {
-        console.log("api hit-->")
-        fundTrnsfer("", tpoId);
-      }
-    }, [paymentSuccess])
+  useEffect(() => {
+    if (paymentSuccess) {
+      console.log("api hit-->")
+      fundTrnsfer("", tpoId);
+    }
+  }, [paymentSuccess])
   useEffect(() => {
     async function fetchSats() {
       try {
@@ -105,8 +105,8 @@ const Tpos = () => {
 
   // const fundTransfer = async () => {
   //   try {
-  //     console.log("tpoId-->",tpoId)
-  //     const responseDt = await   fundTrnsfer("", tpoId);
+  //     console.log("tpoId-->", tpoId)
+  //     const responseDt = await fundTrnsfer("", tpoId);
   //     console.log("responseDt-->", responseDt)
   //   } catch (error) {
   //     console.log("fundTransfer error-->", error)
@@ -494,9 +494,8 @@ const Tpos = () => {
                   {/* OK Button */}
                   <button
                     onClick={handleOkClick}
-                    className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold items-center justify-center rounded-xl transition duration-[400ms] ${
-                      activeIndex === "ok" ? "bg-[#000]" : "bg-green-500 "
-                    }`}
+                    className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold items-center justify-center rounded-xl transition duration-[400ms] ${activeIndex === "ok" ? "bg-[#000]" : "bg-green-500 "
+                      }`}
                   >
                     OK
                   </button>

@@ -91,7 +91,21 @@ export default async function handler(req: any, res: any) {
       if (!stats.status) return res.status(400).json({ status: "failure", message: stats.msg });
 
       const balanceSats = Number(stats.data?.[0]?.balance || 0);
-      const sats = Math.floor(balanceSats / 1000);
+      let sats = Math.floor(balanceSats / 1000);
+      console.log("calculate balance-", sats);
+      let { boltzFee,
+        platformFee,
+        lockupFee,
+        claimFee,
+        totalFees,
+        amountReceived,
+        swapAmount } = await calcLnToChainFeeWithReceivedAmount(sats) as any;
+      sats = sats - totalFees;
+      console.log("totalFees", totalFees)
+      console.log("-->swapAmount", swapAmount)
+      console.log("amountReceived", amountReceived)
+
+      console.log("calculate sats after fee reduciton-", sats);
       if (sats < 26000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
 
       const route = await getDestinationAddress(sats / 1e8, user.walletAddress);
