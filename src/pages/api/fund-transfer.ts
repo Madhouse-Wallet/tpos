@@ -164,7 +164,7 @@ export default async function handler(req: any, res: any) {
 
       console.log("calculate sats after fee reduciton-", sats);
       if (sats < 26000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
-
+ 
       const btcToken = (await userLogIn(1, user.lnbitId_2))?.data?.token;
       const swap = await createSwapReverse({
         wallet: user.lnbitWalletId_2,
