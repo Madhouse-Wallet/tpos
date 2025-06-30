@@ -162,7 +162,7 @@ const Tpos = () => {
       setError("Please enter a valid amount");
       return;
     } else if (!amount || parseInt(amount) > 24000000) {
-      setError("Amount cannot be more than 24 million.");
+      setError("Amount cannot be more than 24000000.");
       return;
     }
 
@@ -315,7 +315,7 @@ const Tpos = () => {
       setError("Please enter a valid amount");
       return;
     } else if (!amount || parseInt(amount) > 24000000) {
-      setError("Amount cannot be more than 24 million.");
+      setError("Amount cannot be more than 24000000.");
       return;
     }
     if (!tpoId) {
