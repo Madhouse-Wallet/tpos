@@ -1,6 +1,6 @@
 import { lambdaInvokeFunction } from "../../lib/apiCall";
 import { logIn, getStats, userLogIn, createSwapReverse, payInvoice } from "./lnbit";
-import { createBtcToUsdcShift } from "./sideShiftAI";
+import { createBtcToUsdcShift, createVariableShift } from "./sideShiftAI";
 import axios from "axios";
 import { sendBitcoinTransaction } from "./sendbitcoin";
 import { calcLnToChainFeeWithReceivedAmount } from "../../utils/helper";
@@ -14,15 +14,19 @@ interface BlockCypherResponse {
 }
 
 
-const getDestinationAddress = async (amount: any, walletAddress: any) => {
+const getDestinationAddress = async (walletAddress: any) => {
   try {
-    const shift = await createBtcToUsdcShift(
-      amount,
+    const shift = await createVariableShift(
       walletAddress,
-      process.env.NEXT_PUBLIC_SIDESHIFT_SECRET_KEY!,
-      process.env.NEXT_PUBLIC_SIDESHIFT_AFFILIATE_ID!
+      process.env.NEXT_PUBLIC_REFUND_ADDRESS!,
+      process.env.NEXT_PUBLIC_SIDESHIFT_AFFILIATE_ID!,
+      "BTC",
+      "USDC",
+      "liquid",
+      "base",
+      process.env.NEXT_PUBLIC_SIDESHIFT_SECRET_KEY!
     ) as any;
-
+    console.log("shift--> response", shift)
     return {
       status: true,
       depositAddress: shift.depositAddress,
@@ -80,6 +84,8 @@ export default async function handler(req: any, res: any) {
     if (userRes?.status !== "success") return res.status(500).json({ error: "Failed to fetch user" });
 
     const user = userRes.data;
+    // const route = await getDestinationAddress(user.wallet);
+    // if (!route?.status) return res.status(400).json({ status: "failure", message: route.message });
     const login = await logIn(1);
     const masterToken = login?.data?.token;
     if (!masterToken) return res.status(401).json({ status: "failure", message: "Token fetch failed" });
@@ -107,31 +113,20 @@ export default async function handler(req: any, res: any) {
 
       console.log("calculate sats after fee reduciton-", sats);
 
-      if (sats < 26000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
+      if (sats < 25000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
 
-      const route = await getDestinationAddress(sats / 1e8, user.walletAddress);
-      if (!route?.status) return res.status(400).json({ status: "failure", message: route.message });
+      const finalRoute = await getDestinationAddress(user.wallet);
+      if (!finalRoute?.status) return res.status(400).json({ status: "failure", message: ("error during final route : " + finalRoute.message) });
 
-      console.log("Step 3: Generating new Bitcoin wallet");
-      const btcWallet = (await axios.post("https://api.blockcypher.com/v1/btc/main/addrs?bech32=true")).data;
-      const { private: privKey, address, wif } = btcWallet;
-      // For Deployment Stage: Keeping a backup of the randomly generated wallet solely for recovery purposes.
-      const addWalletBackupes = await lambdaInvokeFunction({
-        userId: user._id,
-        email: user.email,
-        address: address,
-        wif: wif,
-        privateKey: privKey,
-        tposWallet: user.lnbitWalletId,
-      }, "madhouse-backend-production-addWalletBackup");
+
       const usdcToken = (await userLogIn(1, user.lnbitId))?.data?.token;
       const swap = await createSwapReverse({
         wallet: user.lnbitWalletId,
-        asset: "BTC/BTC",
+        asset: "L-BTC/BTC",
         amount: sats,
         direction: "send",
         instant_settlement: true,
-        onchain_address: address,
+        onchain_address: finalRoute.depositAddress,
         feerate: true,
         feerate_value: 0,
       }, usdcToken, 1);
@@ -139,41 +134,15 @@ export default async function handler(req: any, res: any) {
       console.log("Step 4: Created swap", swap);
       if (!swap?.status) return res.status(400).json({ status: "failure", message: swap.msg });
 
-      const invoice = await payInvoice({ out: true, bolt11: swap.data.invoice }, usdcToken, 1, "");
-      if (!invoice?.status) return res.status(400).json({ status: "failure", message: swap.msg });
+      const invoice = await payInvoice({ out: true, bolt11: swap.data.invoice }, usdcToken, 1, user?.lnbitAdminKey);
+      console.log("invoice-->",invoice)
+      if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
 
-      const btcBalance = await getBitcoinBalance(address);
-      console.log("Step 5: BTC Balance received:", btcBalance?.balance);
-      if (!btcBalance || btcBalance.balance <= 0) {
-        return res.status(400).json({ status: "failure", message: "Swap Transfer complete but BTC balance is 0", data: invoice?.data });
-      }
-
-      const finalRoute = await getDestinationAddress(btcBalance.balance, user.walletAddress);
-      if (!finalRoute?.status) return res.status(400).json({ status: "failure", message: ("error during final route : " + finalRoute.message) });
-
-      const tx = await sendBitcoinTransaction({
-        fromAddress: address,
-        toAddress: finalRoute.depositAddress,
-        amountSatoshi: btcBalance.balance * 1e8,
-        privateKeyHex: wif,
-        network: "main",
+      return res.status(200).json({
+        status: "success",
+        message: "Transfer Done to Generated sideshift Liquid Address!",
+        data: {}
       });
-
-      console.log("Step 6: Final BTC sent", tx);
-      if (tx.success) {
-        return res.status(200).json({
-          status: "success",
-          message: "USDC Transfer Done!",
-          data: { transactionHash: tx.transactionHash, details: tx.details }
-        });
-      } else {
-        return res.status(400).json({
-          status: "failure",
-          message: "Transfer Done To Bitcoin but final BTC transfer to sideshift failed!",
-          data: invoice?.data,
-        });
-      }
-
       // ----- Bitcoin Flow -----
     } else if (user.lnbitLinkId_2 === tpoId) {
       console.log("Step 2: Handling Bitcoin flow");
@@ -213,7 +182,7 @@ export default async function handler(req: any, res: any) {
       console.log("Step 3: Created swap for BTC", swap);
       if (!swap?.status) return res.status(400).json({ status: "failure", message: swap.msg });
 
-      const invoice = await payInvoice({ out: true, bolt11: swap.data.invoice }, btcToken, 1, "");
+      const invoice = await payInvoice({ out: true, bolt11: swap.data.invoice }, btcToken, 1, user?.lnbitAdminKey_2);
       if (invoice?.status) {
         return res.status(200).json({ status: "success", message: "Transfer Done To Bitcoin!", data: invoice.data });
       } else {

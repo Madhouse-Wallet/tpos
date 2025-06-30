@@ -128,23 +128,48 @@ export const getUserByTposID = async (tposId) => {
   }
 };
 
-
+//lnbitLinkId_2, lnbitLinkId, lnbitWalletId, lnbitWalletId_2, tposId
 
 // fund-transfer
 export const fundTrnsfer = async (walletId, tpoId) => {
-    try {
+  try {
     try {
       return await fetch(`/api/fund-transfer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-         walletId, tpoId
+          walletId, tpoId
         }),
       })
         .then((res) => res.json())
         .then((data) => {
           console.log("data-->", data);
           return data;
+        });
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
+  } catch (error) {
+    console.log("sendBtc error-->", error);
+    return false;
+  }
+};
+
+
+export const walletBal = async (lnbitLinkId_2, lnbitLinkId, lnbitWalletId, lnbitWalletId_2, tposId) => {
+  try {
+    try {
+      return await fetch(`/api/userWalletBal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lnbitLinkId_2, lnbitLinkId, lnbitWalletId, lnbitWalletId_2, tposId
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          return data.balance;
         });
     } catch (error) {
       console.log(error);
