@@ -1,10 +1,10 @@
 import { lambdaInvokeFunction } from "../../lib/apiCall";
 import { logIn, getStats, userLogIn, createSwapReverse, payInvoice } from "./lnbit";
-import { createBtcToUsdcShift, createVariableShift } from "./sideShiftAI";
+import { createLbtcToUsdcShift } from "./sideShiftAI";
 import axios from "axios";
 import { sendBitcoinTransaction } from "./sendbitcoin";
 import { calcLnToChainFeeWithReceivedAmount } from "../../utils/helper";
-
+import { reverseSwap } from "./botlzFee";
 // Define response type for the BlockCypher API
 interface BlockCypherResponse {
   private: string;
@@ -14,18 +14,10 @@ interface BlockCypherResponse {
 }
 
 
-const getDestinationAddress = async (walletAddress: any) => {
+const getDestinationAddress = async (walletAddress: any, amount: any) => {
   try {
-    const shift = await createVariableShift(
-      walletAddress,
-      process.env.NEXT_PUBLIC_REFUND_ADDRESS!,
-      process.env.NEXT_PUBLIC_SIDESHIFT_AFFILIATE_ID!,
-      "BTC",
-      "USDC",
-      "liquid",
-      "base",
-      process.env.NEXT_PUBLIC_SIDESHIFT_SECRET_KEY!
-    ) as any;
+    const shift = await createLbtcToUsdcShift(amount, walletAddress, process.env.NEXT_PUBLIC_SIDESHIFT_SECRET_KEY!, process.env.NEXT_PUBLIC_SIDESHIFT_AFFILIATE_ID!) as any;
+
     console.log("shift--> response", shift)
     return {
       status: true,
@@ -84,8 +76,7 @@ export default async function handler(req: any, res: any) {
     if (userRes?.status !== "success") return res.status(500).json({ error: "Failed to fetch user" });
 
     const user = userRes.data;
-    // const route = await getDestinationAddress(user.wallet);
-    // if (!route?.status) return res.status(400).json({ status: "failure", message: route.message });
+
     const login = await logIn(1);
     const masterToken = login?.data?.token;
     if (!masterToken) return res.status(401).json({ status: "failure", message: "Token fetch failed" });
@@ -99,23 +90,15 @@ export default async function handler(req: any, res: any) {
       const balanceSats = Number(stats.data?.[0]?.balance || 0);
       let sats = Math.floor(balanceSats / 1000);
       console.log("calculate balance-", sats);
-      let { boltzFee,
-        platformFee,
-        lockupFee,
-        claimFee,
-        totalFees,
-        amountReceived,
-        swapAmount } = await calcLnToChainFeeWithReceivedAmount(sats) as any;
-      sats = sats - totalFees;
-      console.log("totalFees", totalFees)
-      console.log("-->swapAmount", swapAmount)
-      console.log("amountReceived", amountReceived)
-
-      console.log("calculate sats after fee reduciton-", sats);
+      sats = Math.floor(sats * 0.95);
+      console.log("calculate balance after 0.95-", sats);
 
       if (sats < 25000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
 
-      const finalRoute = await getDestinationAddress(user.wallet);
+      let calculateOnChainAmount = await reverseSwap(sats)
+      console.log("calculateOnChainAmount-->", calculateOnChainAmount)
+
+      const finalRoute = await getDestinationAddress(user.wallet, (calculateOnChainAmount.onchainAmount / 100000000));
       if (!finalRoute?.status) return res.status(400).json({ status: "failure", message: ("error during final route : " + finalRoute.message) });
 
 
@@ -133,7 +116,7 @@ export default async function handler(req: any, res: any) {
       if (!swap?.status) return res.status(400).json({ status: "failure", message: swap.msg });
 
       const invoice = await payInvoice({ out: true, bolt11: swap.data.invoice }, usdcToken, 1, user?.lnbitAdminKey);
-      console.log("invoice-->",invoice)
+      console.log("invoice-->", invoice)
       if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
 
       return res.status(200).json({
@@ -150,21 +133,11 @@ export default async function handler(req: any, res: any) {
 
       let sats = Math.floor(Number(stats.data?.[0]?.balance || 0) / 1000);
       console.log("calculate balance-", sats);
-      let { boltzFee,
-        platformFee,
-        lockupFee,
-        claimFee,
-        totalFees,
-        amountReceived,
-        swapAmount } = await calcLnToChainFeeWithReceivedAmount(sats) as any;
-      sats = sats - totalFees;
-      console.log("totalFees", totalFees)
-      console.log("-->swapAmount", swapAmount)
-      console.log("amountReceived", amountReceived)
+      sats = Math.floor(sats * 0.95);
+      console.log("calculate balance after 0.95-", sats);
 
-      console.log("calculate sats after fee reduciton-", sats);
       if (sats < 26000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
- 
+
       const btcToken = (await userLogIn(1, user.lnbitId_2))?.data?.token;
       const swap = await createSwapReverse({
         wallet: user.lnbitWalletId_2,

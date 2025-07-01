@@ -17,6 +17,7 @@ import {
 } from "../../services/apiService";
 import { filterHexInput } from "../../utils/helper";
 import { fundTrnsfer } from "../../services/apiService";
+import { reverseSwap } from "../../pages/api/botlzFee";
 const Tpos = () => {
   const [activeIndex, setActiveIndex] = useState(null);
   const [amount, setAmount] = useState("");
@@ -119,6 +120,7 @@ const Tpos = () => {
 
   // useEffect(() => {
   //   try {
+  //     // reverseSwap()
   //     fundTransfer()
   //   } catch (error) {
   //     console.log("error-->", error)
