@@ -110,6 +110,8 @@ export default async function handler(req: any, res: any) {
         direction: "send",
         instant_settlement: true,
         onchain_address: finalRoute.depositAddress,
+        feerate: true,
+        feerate_value: 0
       }, usdcToken, 1);
 
       console.log("Step 4: Created swap", swap);
@@ -146,6 +148,8 @@ export default async function handler(req: any, res: any) {
         direction: "send",
         instant_settlement: true,
         onchain_address: user.bitcoinWallet,
+        feerate: true,
+        feerate_value: 0
       }, btcToken, 1);
 
       console.log("Step 3: Created swap for BTC", swap);
