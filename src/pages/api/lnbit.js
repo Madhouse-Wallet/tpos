@@ -121,7 +121,7 @@ const createSwapReverse = async (data, token, type = 1) => {
             { name: "createSwapReverse", data: [data, token, type] },
             "madhouse-backend-production-lnbitCalls"
         );
-        // console.log("createSwapReverse apiResponse lambdaInvokeFunction -->", apiResponse?.data)
+        console.log("createSwapReverse apiResponse lambdaInvokeFunction -->", apiResponse?.data)
         if (apiResponse?.status == "success") {
             return apiResponse?.data;
         } else {

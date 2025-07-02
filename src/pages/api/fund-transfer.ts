@@ -13,7 +13,7 @@ interface BlockCypherResponse {
   wif: string;
 }
 
- 
+
 const getDestinationAddress = async (walletAddress: any, amount: any) => {
   try {
     const shift = await createLbtcToUsdcShift(amount, walletAddress, process.env.NEXT_PUBLIC_SIDESHIFT_SECRET_KEY!, process.env.NEXT_PUBLIC_SIDESHIFT_AFFILIATE_ID!) as any;
@@ -96,13 +96,23 @@ export default async function handler(req: any, res: any) {
       if (sats < 25000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
 
       let calculateOnChainAmount = await reverseSwap(sats)
-      console.log("calculateOnChainAmount-->", calculateOnChainAmount)
+      console.log("calculateOnChainAmount-->", calculateOnChainAmount, sats)
 
       const finalRoute = await getDestinationAddress(user.wallet, (calculateOnChainAmount.onchainAmount / 100000000));
       if (!finalRoute?.status) return res.status(400).json({ status: "failure", message: ("error during final route : " + finalRoute.message) });
 
 
       const usdcToken = (await userLogIn(1, user.lnbitId))?.data?.token;
+      console.log({
+        wallet: user.lnbitWalletId,
+        asset: "L-BTC/BTC",
+        amount: sats,
+        direction: "send",
+        instant_settlement: true,
+        onchain_address: finalRoute.depositAddress,
+        feerate: false,
+        usdcToken
+      })
       const swap = await createSwapReverse({
         wallet: user.lnbitWalletId,
         asset: "L-BTC/BTC",
