@@ -13,7 +13,7 @@ interface BlockCypherResponse {
   wif: string;
 }
 
-
+ 
 const getDestinationAddress = async (walletAddress: any, amount: any) => {
   try {
     const shift = await createLbtcToUsdcShift(amount, walletAddress, process.env.NEXT_PUBLIC_SIDESHIFT_SECRET_KEY!, process.env.NEXT_PUBLIC_SIDESHIFT_AFFILIATE_ID!) as any;
