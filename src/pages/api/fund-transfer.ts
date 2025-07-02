@@ -110,8 +110,7 @@ export default async function handler(req: any, res: any) {
         direction: "send",
         instant_settlement: true,
         onchain_address: finalRoute.depositAddress,
-        feerate: true,
-        feerate_value: 0
+        feerate: false,
       }, usdcToken, 1);
 
       console.log("Step 4: Created swap", swap);
