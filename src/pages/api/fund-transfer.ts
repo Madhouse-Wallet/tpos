@@ -5,7 +5,7 @@ import axios from "axios";
 import { sendBitcoinTransaction } from "./sendbitcoin";
 import { calcLnToChainFeeWithReceivedAmount } from "../../utils/helper";
 import { reverseSwap } from "./botlzFee";
-import { monitorSwap } from "./boltzSocket"
+import { createReverseSwap } from "./boltzSocket"
 // Define response type for the BlockCypher API
 interface BlockCypherResponse {
   private: string;
@@ -22,6 +22,7 @@ const getDestinationAddress = async (walletAddress: any, amount: any) => {
     console.log("shift--> response", shift)
     return {
       status: true,
+      shift,
       depositAddress: shift.depositAddress,
       settleAmount: parseFloat(shift.settleAmount || 0),
     };
@@ -87,49 +88,38 @@ export default async function handler(req: any, res: any) {
       console.log("Step 2: Handling USDC flow");
       const stats = await getStats(user.lnbitWalletId, masterToken, 1);
       if (!stats.status) return res.status(400).json({ status: "failure", message: stats.msg });
-
       const balanceSats = Number(stats.data?.[0]?.balance || 0);
       let sats = Math.floor(balanceSats / 1000);
       console.log("calculate balance-", sats);
-      // sats = Math.floor(sats * 0.95);
-      // console.log("calculate balance after 0.95-", sats);
+      sats = Math.floor(sats * 0.97);
+      console.log("calculate balance after 0.95-", sats);
 
-      // if (sats < 25000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
+      if (sats < 10000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
+      let calculateOnChainAmount = await reverseSwap(sats)
+      console.log("calculateOnChainAmount-->", calculateOnChainAmount, sats)
+      const finalRoute = await getDestinationAddress(user.wallet, (calculateOnChainAmount.onchainAmount / 100000000));
+      if (!finalRoute?.status) return res.status(400).json({ status: "failure", message: ("error during final route : " + finalRoute.message) });
+      const shiftRouteAdd = await lambdaInvokeFunction({
+        email: user.email,
+        wallet: user.wallet,
+        type: "tpos usdc shift",
+        data: finalRoute.shift
+      }, "madhouse-backend-production-addSideShiftTrxn");
 
-      // let calculateOnChainAmount = await reverseSwap(sats)
-      // console.log("calculateOnChainAmount-->", calculateOnChainAmount, sats)
-
-      // const finalRoute = await getDestinationAddress(user.wallet, (calculateOnChainAmount.onchainAmount / 100000000));
-      // if (!finalRoute?.status) return res.status(400).json({ status: "failure", message: ("error during final route : " + finalRoute.message) });
-
-
+      console.log("finalRoute-->", finalRoute)
       const usdcToken = (await userLogIn(1, user.lnbitId))?.data?.token;
-      console.log({
-        wallet: user.lnbitWalletId,
-        asset: "L-BTC/BTC",
-        amount: 170,
-        direction: "send",
-        instant_settlement: true,
-        onchain_address: "lq1qqgagnrfj78gwjs8jzv0szlhskf3yt4euv8sm9f0xq34urdv0py7mrevzlsa7n9mpenepxatp299wmln5ch9cvm46rml2dl8u9",
-        feerate: false,
-        usdcToken
-      })
-      const swap = await createSwapReverse({
-        wallet: user.lnbitWalletId,
-        asset: "L-BTC/BTC",
-        amount: 170,
-        direction: "send",
-        instant_settlement: true,
-        onchain_address: "lq1qqgagnrfj78gwjs8jzv0szlhskf3yt4euv8sm9f0xq34urdv0py7mrevzlsa7n9mpenepxatp299wmln5ch9cvm46rml2dl8u9",
-        feerate: false,
-      }, usdcToken, 1);
-
+      const swap = await createReverseSwap(sats, finalRoute.depositAddress);
       console.log("Step 4: Created swap", swap);
-      if (!swap?.status) return res.status(400).json({ status: "failure", message: swap.msg });
-      monitorSwap(swap?.data)
+      if (!swap?.status) return res.status(400).json({ status: "failure", message: swap.message });
+      const boltzRouteAdd = await lambdaInvokeFunction({
+        email: user.email,
+        wallet: user.wallet,
+        type: "tpos usdc shift",
+        data: swap.data
+      }, "madhouse-backend-production-addBoltzTrxn");
       const invoice = await payInvoice({ out: true, bolt11: swap.data.invoice }, usdcToken, 1, user?.lnbitAdminKey);
-      console.log("invoice-->", invoice)
-      // if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
+      console.log("tpos usdc invoice-->", invoice)
+      if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
 
       return res.status(200).json({
         status: "success",
@@ -145,7 +135,7 @@ export default async function handler(req: any, res: any) {
 
       let sats = Math.floor(Number(stats.data?.[0]?.balance || 0) / 1000);
       console.log("calculate balance-", sats);
-      sats = Math.floor(sats * 0.95);
+      sats = Math.floor(sats * 0.97);
       console.log("calculate balance after 0.95-", sats);
 
       if (sats < 26000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
@@ -166,12 +156,14 @@ export default async function handler(req: any, res: any) {
       if (!swap?.status) return res.status(400).json({ status: "failure", message: swap.msg });
 
       const invoice = await payInvoice({ out: true, bolt11: swap.data.invoice }, btcToken, 1, user?.lnbitAdminKey_2);
-      console.log("invoice-->", invoice)
-      if (invoice?.status) {
-        return res.status(200).json({ status: "success", message: "Transfer Done To Bitcoin!", data: invoice.data });
-      } else {
-        return res.status(400).json({ status: "failure", message: swap.msg });
-      }
+      console.log("tpos bitcoin invoice-->", invoice)
+      return res.status(400).json({ status: "failure", message: swap.msg });
+
+      // if (invoice?.status) {
+      //   return res.status(200).json({ status: "success", message: "Transfer Done To Bitcoin!", data: invoice.data });
+      // } else {
+      //   return res.status(400).json({ status: "failure", message: swap.msg });
+      // }
     }
 
     // No match found for TPO ID
