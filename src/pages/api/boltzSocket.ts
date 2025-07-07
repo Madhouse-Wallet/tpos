@@ -33,17 +33,16 @@ const webSocketEndpoint = 'wss://api.boltz.exchange/v2/ws'
 // Amount you want to swap
 // const invoiceAmount = 170//10_000;
 const network = networks.liquid;
-export const createReverseSwap = async (invoiceAmount: any, destinationAddress: any) => {
+
+// await init();
+const zkp = (await import("@vulpemventures/secp256k1-zkp")).default;
+const secp = await zkp();
+//   init(secp);
+// const zkp = await Secp256k1ZKP();
+init(secp);
+
+export const createReverseSwap = async (invoiceAmount: any) => {
   try {
-
-
-    // await init();
-    const zkp = (await import("@vulpemventures/secp256k1-zkp")).default;
-    const secp = await zkp();
-
-    //   init(secp);
-    // const zkp = await Secp256k1ZKP();
-    init(secp);
 
     // Create a random preimage for the swap; has to have a length of 32 bytes
     const preimage = randomBytes(32);
@@ -57,15 +56,38 @@ export const createReverseSwap = async (invoiceAmount: any, destinationAddress: 
         from: 'BTC',
         claimPublicKey: Buffer.from(keys.publicKey).toString('hex'),
         preimageHash: crypto.sha256(preimage).toString('hex'),
-        claimAddress: destinationAddress,
       })
     ).data;
 
     console.log('Swap quote');
     console.log(createdResponse);
     console.log();
+    return {
+      status: true,
+      data: createdResponse,
+      keys,
+      preimage
+    };
+  } catch (error: any) {
+    console.error("Detailed error:", error);
+
+    let message = "An unexpected error occurred.";
+    if (error.response?.data?.message) {
+      message = error.response.data.message;
+    } else if (error.message) {
+      message = error.message;
+    }
+    return {
+      status: false,
+      message
+    };
+  }
+}
 
 
+
+export const createReverseSwapSocket = async (createdResponse: any, preimage: any, keys: any, destinationAddress: any) => {
+  try {
     // Create a WebSocket and subscribe to updates for the created swap
     const webSocket = new ws(`${webSocketEndpoint}/v2/ws`);
     webSocket.on('open', () => {
@@ -201,7 +223,7 @@ export const createReverseSwap = async (invoiceAmount: any, destinationAddress: 
       status: true,
       data: createdResponse
     };
-  } catch (error:any) {
+  } catch (error: any) {
     console.error("Detailed error:", error);
 
     let message = "An unexpected error occurred.";
@@ -216,4 +238,3 @@ export const createReverseSwap = async (invoiceAmount: any, destinationAddress: 
     };
   }
 }
-

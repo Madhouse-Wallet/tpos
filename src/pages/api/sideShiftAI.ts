@@ -30,7 +30,7 @@ interface ShiftResponse {
 }
 
 // Fixed IP address as used in curl commands
-const FIXED_IP_ADDRESS = "201.144.119.146";
+const FIXED_IP_ADDRESS = process.env.NEXT_PUBLIC_IP_ADDRESS;
 
 /**
  * Combined function to create a USDC to BTC fixed shift in one call
@@ -40,7 +40,7 @@ const FIXED_IP_ADDRESS = "201.144.119.146";
  * @param affiliateId - SideShift affiliate ID
  * @returns The shift response containing deposit address and other details
  */
- 
+
 export const createBtcToUsdcShift = async (
   btcAmount: string,
   userBaseWallet: string,
@@ -104,11 +104,13 @@ export const createBtcToUsdcShift = async (
 
 
 
- export const createLbtcToUsdcShift = async (
+export const createLbtcToUsdcShift = async (
   btcAmount: string,
   userBaseWallet: string,
   secretKey: string,
-  affiliateId: string
+  affiliateId: string,
+  refundAddress: string,
+  boltzSwapId: string
 ): Promise<ShiftResponse> => {
   try {
     // Step 1: Request a quote
@@ -116,10 +118,11 @@ export const createBtcToUsdcShift = async (
       "https://sideshift.ai/api/v2/quotes",
       {
         affiliateId,
-        depositCoin: "BTC",
-        depositNetwork: "liquid",
-        settleCoin: "USDC",
-        settleNetwork: "base",
+        "depositCoin": "btc",
+        "depositNetwork": "liquid",
+        "settleCoin": "usdc",
+        "settleNetwork": "base",
+        "settleAmount": null,
         depositAmount: btcAmount,
       },
       {
@@ -140,6 +143,8 @@ export const createBtcToUsdcShift = async (
         settleAddress: userBaseWallet,
         affiliateId,
         quoteId: quoteData.id,
+        "refundAddress": refundAddress,
+        "refundMemo": `Failed to settle shift for Wallet Address: ${userBaseWallet} Boltz Reverse Swap ID: ${boltzSwapId}`,
       },
       {
         headers: {
@@ -165,4 +170,4 @@ export const createBtcToUsdcShift = async (
   }
 };
 
- 
+

@@ -5,7 +5,7 @@ import axios from "axios";
 import { sendBitcoinTransaction } from "./sendbitcoin";
 import { calcLnToChainFeeWithReceivedAmount } from "../../utils/helper";
 import { reverseSwap } from "./botlzFee";
-import { createReverseSwap } from "./boltzSocket"
+import { createReverseSwap, createReverseSwapSocket } from "./boltzSocket"
 // Define response type for the BlockCypher API
 interface BlockCypherResponse {
   private: string;
@@ -15,9 +15,9 @@ interface BlockCypherResponse {
 }
 
 
-const getDestinationAddress = async (walletAddress: any, amount: any) => {
+const getDestinationAddress = async (walletAddress: any, amount: any, boltzSwapId: any) => {
   try {
-    const shift = await createLbtcToUsdcShift(amount, walletAddress, process.env.NEXT_PUBLIC_SIDESHIFT_SECRET_KEY!, process.env.NEXT_PUBLIC_SIDESHIFT_AFFILIATE_ID!) as any;
+    const shift = await createLbtcToUsdcShift(amount, walletAddress, process.env.NEXT_PUBLIC_SIDESHIFT_SECRET_KEY!, process.env.NEXT_PUBLIC_SIDESHIFT_AFFILIATE_ID!, process.env.NEXT_PUBLIC_REFUND_ADDRESS!, boltzSwapId) as any;
 
     console.log("shift--> response", shift)
     return {
@@ -91,14 +91,37 @@ export default async function handler(req: any, res: any) {
       const balanceSats = Number(stats.data?.[0]?.balance || 0);
       let sats = Math.floor(balanceSats / 1000);
       console.log("calculate balance-", sats);
-      sats = Math.floor(sats * 0.97);
-      console.log("calculate balance after 0.95-", sats);
 
-      if (sats < 10000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
-      let calculateOnChainAmount = await reverseSwap(sats)
-      console.log("calculateOnChainAmount-->", calculateOnChainAmount, sats)
-      const finalRoute = await getDestinationAddress(user.wallet, (calculateOnChainAmount.onchainAmount / 100000000));
+
+      let invoice_amount = 0;
+      const feeMultiplier = 1.1;
+      const liquidBTCNetworkFee = Number(process.env.NEXT_PUBLIC_LIQUID_BTC_NETWORK_FEE) //200 sats is the averave fee for a Liquid transaction settlements
+
+      const minSwap = Number(process.env.NEXT_PUBLIC_MIN_USDC_SWAP_SATS);
+      const maxSwap = Number(process.env.NEXT_PUBLIC_MAX_USDC_SWAP_SATS);
+
+
+      if (sats >= maxSwap * feeMultiplier) {
+        invoice_amount = maxSwap;
+      } else if (sats >= minSwap * feeMultiplier) {
+        // Ensure room for 10% fee
+        invoice_amount = sats / feeMultiplier;
+      } else {
+        return res.status(400).json({ status: "failure", message: "Insufficient Balance" })
+      }
+      invoice_amount = Math.floor(invoice_amount)
+      console.log("invoice_amount-->", invoice_amount)
+
+      let createBoltzSwapApi = await createReverseSwap(invoice_amount)
+
+      if (!createBoltzSwapApi?.status) return res.status(400).json({ status: "failure", message: ("error creating swap : " + createBoltzSwapApi.message) });
+      const shift_amount = parseInt(createBoltzSwapApi.data.onchainAmount) - liquidBTCNetworkFee;
+      console.log("shift_amount-->", shift_amount)
+      const finalRoute = await getDestinationAddress(user.wallet, (shift_amount / 100000000), createBoltzSwapApi.data.id);
+
       if (!finalRoute?.status) return res.status(400).json({ status: "failure", message: ("error during final route : " + finalRoute.message) });
+
+
       const shiftRouteAdd = await lambdaInvokeFunction({
         email: user.email,
         wallet: user.wallet,
@@ -108,22 +131,50 @@ export default async function handler(req: any, res: any) {
 
       console.log("finalRoute-->", finalRoute)
       const usdcToken = (await userLogIn(1, user.lnbitId))?.data?.token;
-      const swap = await createReverseSwap(sats, finalRoute.depositAddress);
-      console.log("Step 4: Created swap", swap);
-      if (!swap?.status) return res.status(400).json({ status: "failure", message: swap.message });
+
+
+      const swapSocket = await createReverseSwapSocket(createBoltzSwapApi.data,
+        createBoltzSwapApi.preimage, createBoltzSwapApi.keys, finalRoute.depositAddress);
+
+      console.log("Step 4: Created swap", swapSocket);
+
+
+      if (!swapSocket?.status) return res.status(400).json({ status: "failure", message: swapSocket.message });
+
       const boltzRouteAdd = await lambdaInvokeFunction({
         email: user.email,
         wallet: user.wallet,
         type: "tpos usdc shift",
-        data: swap.data
+        data: createBoltzSwapApi.data
       }, "madhouse-backend-production-addBoltzTrxn");
-      const invoice = await payInvoice({ out: true, bolt11: swap.data.invoice }, usdcToken, 1, user?.lnbitAdminKey);
+
+      // pay invoice
+      const invoice = await payInvoice({ out: true, bolt11: swapSocket.data.invoice }, usdcToken, 1, user?.lnbitAdminKey);
+
       console.log("tpos usdc invoice-->", invoice)
+
+      const apiResponse = await lambdaInvokeFunction(
+        {
+          findData: {
+            email: user.email
+          }, updtData: {
+            $push: {
+              sideshiftIds: {
+                id: finalRoute.shift.id,
+                date: new Date(), // stores the current date/time
+                type: "TposUsdc", // or whatever type value you want to store
+              },
+            },
+          }
+        },
+        "madhouse-backend-production-updtUser"
+      );
+
       if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
 
       return res.status(200).json({
         status: "success",
-        message: "Transfer Done to Generated sideshift Liquid Address!",
+        message: "Successfully Transfered the USDC!",
         data: {}
       });
       // ----- Bitcoin Flow -----
@@ -135,10 +186,21 @@ export default async function handler(req: any, res: any) {
 
       let sats = Math.floor(Number(stats.data?.[0]?.balance || 0) / 1000);
       console.log("calculate balance-", sats);
-      sats = Math.floor(sats * 0.97);
-      console.log("calculate balance after 0.95-", sats);
+      const feeMultiplier = 1.1;
+      const minSwap = Number(process.env.NEXT_PUBLIC_MIN_BTC_SWAP_SATS);
+      const maxSwap = Number(process.env.NEXT_PUBLIC_MAX_BTC_SWAP_SATS);
 
-      if (sats < 26000 || sats > 24000000) return res.status(400).json({ status: "failure", message: "Insufficient Balance" });
+
+      if (sats >= maxSwap * feeMultiplier) {
+        sats = maxSwap;
+      } else if (sats >= minSwap * feeMultiplier) {
+        // Ensure room for 10% fee
+        sats = sats / feeMultiplier;
+      } else {
+        return res.status(400).json({ status: "failure", message: "Insufficient Balance" })
+      }
+
+      console.log("swaping to btc for sats : ", sats);
 
       const btcToken = (await userLogIn(1, user.lnbitId_2))?.data?.token;
       const swap = await createSwapReverse({
