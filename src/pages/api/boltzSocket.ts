@@ -11,8 +11,6 @@ import { randomBytes } from 'crypto';
 import { ECPairFactory } from 'ecpair';
 import { crypto, Transaction, address, networks } from 'liquidjs-lib';
 import * as ecc from 'tiny-secp256k1';
-import Secp256k1ZKP from '@vulpemventures/secp256k1-zkp';
-import zkpInit from '@vulpemventures/secp256k1-zkp';
 import {
   Musig,
   OutputType,
