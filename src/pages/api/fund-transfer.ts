@@ -152,7 +152,7 @@ export default async function handler(req: any, res: any) {
       const invoice = await payInvoice({ out: true, bolt11: swapSocket.data.invoice }, usdcToken, 1, user?.lnbitAdminKey);
 
       console.log("tpos usdc invoice-->", invoice)
-
+   if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
       const apiResponse = await lambdaInvokeFunction(
         {
           findData: {
@@ -170,7 +170,7 @@ export default async function handler(req: any, res: any) {
         "madhouse-backend-production-updtUser"
       );
 
-      if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
+   
 
       return res.status(200).json({
         status: "success",

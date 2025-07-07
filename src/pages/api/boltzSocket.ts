@@ -10,7 +10,14 @@ import axios from 'axios';
 import { randomBytes } from 'crypto';
 import { ECPairFactory } from 'ecpair';
 import { crypto, Transaction, address, networks } from 'liquidjs-lib';
-import * as ecc from 'tiny-secp256k1';
+
+import * as secp1 from '@bitcoinerlab/secp256k1';
+
+const ECPair = ECPairFactory(secp1);
+
+
+
+
 import {
   Musig,
   OutputType,
@@ -44,8 +51,7 @@ export const createReverseSwap = async (invoiceAmount: any) => {
 
     // Create a random preimage for the swap; has to have a length of 32 bytes
     const preimage = randomBytes(32);
-    const keys = ECPairFactory(ecc).makeRandom();
-
+    const keys = ECPair.makeRandom();
     // Create a Reverse Swap
     const createdResponse = (
       await axios.post(`${endpoint}/v2/swap/reverse`, {
