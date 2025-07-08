@@ -201,7 +201,7 @@ const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
           document.body
         )}
       <div
-        className={`${oxanium.className} fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]`}
+        className={`${oxanium.className} fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-`}
       >
         <div
           onClick={handleHistoryPop}
@@ -251,7 +251,7 @@ const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
                                 <p
                                   className={`m-0 ${getStatusColor(
                                     tx.status
-                                  )} font-medium text-xs`}
+                                  )} font-medium text-xs errorMessage`}
                                 >
                                   {getStatusText(tx.status)}
                                 </p>

@@ -73,7 +73,7 @@ const PaymentPopup = ({
   return (
     <>
       <div
-        className={`${oxanium.className} fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999] pb-[100px]`}
+        className={`${oxanium.className} fixed inset-0 flex items-center justify-center px-3 cstmModal z-[9999]`}
       >
         <div
           onClick={handlePaymentPop}

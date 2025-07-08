@@ -15,6 +15,7 @@ import {
   payInvoice,
 } from "../../services/apiService";
 import { filterHexInput } from "../../utils/helper";
+import styled from "styled-components";
 
 const Tpos = () => {
   const [activeIndex, setActiveIndex] = useState(null);
@@ -375,7 +376,7 @@ const Tpos = () => {
           />
         </div>
       )}
-      <section className="h-screen pt-12 pb-5 text-center relative">
+      <SectionWrpper className="h-[100svh] pt-12 pb-5 text-center relative">
         {paymentSuccess && (
           <>
             <div className="fixed w-full h-full z-[9999]  top-0 left-0 flex items-center justify-center">
@@ -396,7 +397,7 @@ const Tpos = () => {
 
         <button
           onClick={() => setHistoryPop(!historyPop)}
-          className="absolute top-2 right-2 flex items-center justify-center h-[45px] w-[45px] bg-[#ea611d] transition duration-[400ms] hover:bg-[#000] rounded-full shadow"
+          className="transactionBtn  absolute top-2 right-2 flex items-center justify-center h-[45px] w-[45px] bg-[#ea611d] transition duration-[400ms] hover:bg-[#000] rounded-full shadow"
         >
           {historyIcn}
         </button>
@@ -419,7 +420,7 @@ const Tpos = () => {
         <div className="container px-3 h-full">
           <div className="grid gap-3 grid-cols-12 h-full pt-[60px] sm:pt-0">
             <div className="col-span-12 h-full">
-              <div className="h-full flex flex-col justify-between">
+              <div className="h-full flex flex-col justify-between wrpperMain">
                 <div className="text-center top">
                   <h4 className="m-0 font-semibold text-4xl">
                     {formatCurrency(amount)}
@@ -427,7 +428,9 @@ const Tpos = () => {
                   <p className="mb-0 mt-4 font-medium text-[20px]">
                     {sats} sat
                   </p>
-                  {error && <p className="text-red-500 mt-2">{error}</p>}
+                  {error && (
+                    <p className="text-red-500 mt-2 errorMessage">{error}</p>
+                  )}
                 </div>
                 <div className="center w-full max-w-[450px] mx-auto">
                   <div className="flex items-center justify-center gap-3 mb-2">
@@ -524,10 +527,59 @@ const Tpos = () => {
             </div>
           </div>
         </div>
-      </section>
+      </SectionWrpper>
     </>
   );
 };
+const SectionWrpper = styled.section`
+  @media (max-height: 450px) {
+    .errorMessage {
+      font-size: 8px !important;
+      margin-top: 0 !important;
+    }
+    .transactionBtn {
+      height: 30px;
+      width: 30px;
+      svg {
+        height: 14px;
+        width: 14px;
+      }
+    }
+    .top {
+      h4 {
+        font-size: 20px;
+        line-height: 24px;
+      }
+      p {
+        font-size: 10px;
+        margin-top: 5px;
+        line-height: 12px;
+      }
+    }
+    .center {
+      max-width: 200px;
+      button {
+        padding: 5px;
+        height: 28px;
+        font-size: 8px;
+        min-width: 80px;
+        border-radius: 6px;
+      }
+      input {
+        height: 30px;
+        font-size: 10px;
+      }
+    }
+    .keyPad {
+      max-width: 300px;
+      gap: 5px;
+      button {
+        min-height: 30px;
+        font-size: 10px;
+      }
+    }
+  }
+`;
 
 export default Tpos;
 

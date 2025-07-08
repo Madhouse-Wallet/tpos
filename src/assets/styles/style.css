@@ -91,3 +91,10 @@ w3m-modal.open {
     padding: 0 14px;
   }
 }
+
+@media (max-height: 450px) {
+  body {
+    font-size: 12px;
+    line-height: 18px;
+  }
+}
