@@ -11,12 +11,14 @@ import {
   createTposInvoice,
   getUserByEmail,
   getUserByTposID,
+  walletBal,
   getUserByWallet,
   payInvoice,
 } from "../../services/apiService";
 import { filterHexInput } from "../../utils/helper";
 import styled from "styled-components";
 
+import { fundTrnsfer } from "../../services/apiService";
 const Tpos = () => {
   const [activeIndex, setActiveIndex] = useState(null);
   const [amount, setAmount] = useState("");
@@ -27,6 +29,7 @@ const Tpos = () => {
   const [showLoader, setShowLoader] = useState(false);
   const [email, setEmail] = useState("");
   const [walletId, setWalletId] = useState("");
+  const [walBal, setWalBal] = useState(0);
   const [tpoId, setTpoId] = useState(null);
   const [invoiceData, setInvoiceData] = useState(null);
   const [qrCodeImage, setQrCodeImage] = useState("");
@@ -45,6 +48,12 @@ const Tpos = () => {
 
   const [sats, setSats] = useState(null);
 
+  useEffect(() => {
+    if (paymentSuccess) {
+      console.log("api hit-->");
+      fundTrnsfer("", tpoId);
+    }
+  }, [paymentSuccess]);
   useEffect(() => {
     async function fetchSats() {
       try {
@@ -73,16 +82,24 @@ const Tpos = () => {
 
     const userData = async () => {
       const apiResponse = await getUserByTposID(id);
+
       console.log("line-74", apiResponse);
       if (!apiResponse) {
         return;
       }
+      const walletBalStats = await walletBal(
+        apiResponse?.lnbitLinkId_2,
+        apiResponse?.lnbitLinkId,
+        apiResponse?.lnbitWalletId,
+        apiResponse?.lnbitWalletId_2,
+        id
+      );
       const email = apiResponse?.email;
       const wallet = apiResponse?.lnbitWalletId;
       if (id) setTpoId(id);
       if (email) setEmail(email);
       if (wallet) setWalletId(wallet);
-
+      if (walletBalStats) setWalBal(walletBalStats);
       if (!email) {
         return;
       }
@@ -96,6 +113,25 @@ const Tpos = () => {
 
     userData();
   }, [params]);
+
+  // const fundTransfer = async () => {
+  //   try {
+  //     console.log("tpoId-->", tpoId)
+  //     const responseDt = await fundTrnsfer("", tpoId);
+  //     console.log("responseDt-->", responseDt)
+  //   } catch (error) {
+  //     console.log("fundTransfer error-->", error)
+  //   }
+  // }
+
+  // useEffect(() => {
+  //   try {
+  //     // reverseSwap()
+  //     fundTransfer()
+  //   } catch (error) {
+  //     console.log("error-->", error)
+  //   }
+  // }, [tpoId])
 
   // Ethereum address validation
   const isValidEthereumAddress = (address) => {
@@ -132,6 +168,9 @@ const Tpos = () => {
   const startTapToPay = async () => {
     if (!amount || parseInt(amount) <= 0) {
       setError("Please enter a valid amount");
+      return;
+    } else if (!amount || parseInt(amount) > 24000000) {
+      setError("Amount cannot be more than 24000000.");
       return;
     }
 
@@ -283,8 +322,10 @@ const Tpos = () => {
     if (!amount || parseInt(amount) <= 0) {
       setError("Please enter a valid amount");
       return;
+    } else if (!amount || parseInt(amount) > 24000000) {
+      setError("Amount cannot be more than 24000000.");
+      return;
     }
-
     if (!tpoId) {
       setError("TPOS ID is missing");
       setPaymentPop(true);
@@ -411,10 +452,10 @@ const Tpos = () => {
               <span className="font-bold themeClr">{emailIcn}</span>{" "}
               {email || "not found"}
             </li>
-            {/* <li className="py-1 flex items-center gap-1">
+            <li className="py-1 flex items-center gap-1">
               <span className="font-bold themeClr">{walletIcn}</span>{" "}
-              {walletId || "not found"}
-            </li> */}
+              {walBal || "not found"}
+            </li>
           </ul>
         </div>
         <div className="container px-3 h-full">
