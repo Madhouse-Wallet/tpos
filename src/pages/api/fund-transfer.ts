@@ -1,10 +1,6 @@
 import { lambdaInvokeFunction } from "../../lib/apiCall";
 import { logIn, getStats, userLogIn, createSwapReverse, payInvoice } from "./lnbit";
 import { createLbtcToUsdcShift } from "./sideShiftAI";
-import axios from "axios";
-import { sendBitcoinTransaction } from "./sendbitcoin";
-import { calcLnToChainFeeWithReceivedAmount } from "../../utils/helper";
-import { reverseSwap } from "./botlzFee";
 import { createReverseSwap, createReverseSwapSocket } from "./boltzSocket"
 // Define response type for the BlockCypher API
 interface BlockCypherResponse {
@@ -149,10 +145,10 @@ export default async function handler(req: any, res: any) {
       }, "madhouse-backend-production-addBoltzTrxn");
 
       // pay invoice
-      const invoice = await payInvoice({ out: true, bolt11: swapSocket.data.invoice }, usdcToken, 1, user?.lnbitAdminKey);
+      // const invoice = await payInvoice({ out: true, bolt11: swapSocket.data.invoice }, usdcToken, 1, user?.lnbitAdminKey);
 
-      console.log("tpos usdc invoice-->", invoice)
-   if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
+      // console.log("tpos usdc invoice-->", invoice)
+  //  if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
       const apiResponse = await lambdaInvokeFunction(
         {
           findData: {
