@@ -495,7 +495,7 @@ const Tpos = () => {
                       type="text"
                       value={memo}
                       onChange={handleMemoChange}
-                      className="border-[#8c8c8c] bg-[#fff] hover:bg-white/6 text-black flex text-[14px] font-semibold w-full border-px md:border-hpx px-5 py-2 h-12 rounded-full outline-0"
+                      className="border-[#8c8c8c] bg-[#fff] text-black flex text-[14px] font-semibold w-full border-px md:border-hpx px-5 py-2 h-12 rounded-full outline-0"
                     />
                   </div>
                 </div>
