@@ -11,6 +11,7 @@ const oxanium = Inter({
 
 const PaymentPopup = ({
   paymentPop,
+  setAmount,
   setPaymentPop,
   qrCodeImage,
   tpoId,
@@ -47,7 +48,7 @@ const PaymentPopup = ({
       if (data.status === "success") {
 
         setPaymentSuccess(true);
-
+        setAmount("")
         setTimeout(() => {
           setPaymentPop(false);
         }, 10000);
