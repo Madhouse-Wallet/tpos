@@ -90,7 +90,7 @@ export default async function handler(req: any, res: any) {
 
 
       let invoice_amount = 0;
-      const feeMultiplier = 1.1;
+      const feeMultiplier = Number(process.env.NEXT_PUBLIC_FEE_MULTIPLIER) || 1.1; // e.g. 1.1
       const liquidBTCNetworkFee = Number(process.env.NEXT_PUBLIC_LIQUID_BTC_NETWORK_FEE) //200 sats is the averave fee for a Liquid transaction settlements
 
       const minSwap = Number(process.env.NEXT_PUBLIC_MIN_USDC_SWAP_SATS);
@@ -148,7 +148,7 @@ export default async function handler(req: any, res: any) {
       const invoice = await payInvoice({ out: true, bolt11: swapSocket.data.invoice }, usdcToken, 1, user?.lnbitAdminKey);
 
       console.log("tpos usdc invoice-->", invoice)
-   if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
+      if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
       const apiResponse = await lambdaInvokeFunction(
         {
           findData: {
@@ -166,7 +166,7 @@ export default async function handler(req: any, res: any) {
         "madhouse-backend-production-updtUser"
       );
 
-   
+
 
       return res.status(200).json({
         status: "success",
