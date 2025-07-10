@@ -6,6 +6,8 @@ import HistoryPopup from "@/components/modals/HistoryPopup";
 import animationData from "./taptoPay.json";
 import LottieComponent from "./TaptoPayanimation";
 import { useParams, useRouter } from "next/navigation";
+import { lambdaInvokeFunction } from "../../lib/apiCall";
+
 import QRCode from "qrcode";
 import {
   createTposInvoice,
@@ -65,7 +67,12 @@ const Tpos = () => {
         const calculatedSats = Math.ceil(
           (usdAmount / btcPriceUsd) * 100_000_000
         );
-        setSats(calculatedSats);
+        if (calculatedSats < 24000000) {
+          setSats(calculatedSats);
+          setError("");
+        } else {
+          setError("Amount cannot be more than 24000000.");
+        }
       } catch (err) {
         console.error("Error:", err);
       }
@@ -132,6 +139,10 @@ const Tpos = () => {
   //     console.log("error-->", error)
   //   }
   // }, [tpoId])
+
+  // useEffect(()=>{
+  //   const userRes =  lambdaInvokeFunction({ tposId: tpoId }, "madhouse-backend-production-lbtcToUsdcTransfer");
+  // },[])
 
   // Ethereum address validation
   const isValidEthereumAddress = (address) => {
@@ -481,8 +492,8 @@ const Tpos = () => {
                         key={key}
                         onClick={() => handleTab(key)}
                         className={`${tab == key
-                            ? "opacity-100 bg-[#ea611d] text-white"
-                            : "text-black bg-[#ddd]"
+                          ? "opacity-100 bg-[#ea611d] text-white"
+                          : "text-black bg-[#ddd]"
                           } flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl text-[14px] p-3`}
                       >
                         {item.title}
