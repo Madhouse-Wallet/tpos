@@ -458,15 +458,15 @@ const Tpos = () => {
           <ul className="list-none pl-0 mb-0">
             <li className="py-1 flex items-center gap-1">
               <span className="font-bold themeClr">{calculatorIcn}</span>{" "}
-              {tpoId || "not found"}
+              {`tposID: ${tpoId || "not found"}` }
             </li>
             <li className="py-1 flex items-center gap-1">
               <span className="font-bold themeClr">{emailIcn}</span>{" "}
-              {email || "not found"}
+              {`email: ${email || "not found"}` }
             </li>
             <li className="py-1 flex items-center gap-1">
               <span className="font-bold themeClr">{walletIcn}</span>{" "}
-              {walBal || "not found"}
+              {`tpos balance (sats): ${walBal|| "not found"}` }
             </li>
           </ul>
         </div>
