@@ -217,7 +217,7 @@ const Tpos = () => {
         tpoId,
         sats,
         getInternalMemo() || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
-        existingUser?.lnaddress,
+        null,
         {}
       );
 
@@ -350,7 +350,7 @@ const Tpos = () => {
         tpoId,
         sats,
         getInternalMemo() || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
-        process.env.NEXT_PUBLIC_TPOS_LNURL,
+        null,
         {}
       );
       generateQRCode(response.payment_request);
