@@ -33,6 +33,33 @@ export const createTposInvoice = async (
   }
 };
 
+export const getLnAddress = async (
+  tpoId
+) => {
+  try {
+    try {
+      return await fetch(`/api/getLnAddress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tpoId
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("data-->", data);
+          return data;
+        });
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
+  } catch (error) {
+    console.log("createInvoice error-->", error);
+    return false;
+  }
+};
+
 export const payInvoice = async (invoice, address) => {
   try {
     try {

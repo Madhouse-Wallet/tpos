@@ -11,6 +11,7 @@ import { lambdaInvokeFunction } from "../../lib/apiCall";
 import QRCode from "qrcode";
 import {
   createTposInvoice,
+  getLnAddress,
   getUserByEmail,
   getUserByTposID,
   walletBal,
@@ -211,13 +212,22 @@ const Tpos = () => {
       if (!existingUser) {
         throw new Error("User not found for this wallet address");
       }
-
+      // get lnaddress 
+      let userLnaddress = process.env.NEXT_PUBLIC_DEFAULT_LNADDRESS
+      // get lnaddress
+      const getLnAddressResp = await getLnAddress(
+        tpoId
+      );
+      if (getLnAddressResp.status != "failure") {
+        userLnaddress = getLnAddressResp.lnaddress
+      }
+      console.log("getLnAddressResp-->", getLnAddressResp)
       // 2. Generate invoice with user's lnUrlAddress
       const response = await createTposInvoice(
         tpoId,
         sats,
         getInternalMemo() || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
-        null,
+        userLnaddress,
         {}
       );
 
@@ -346,11 +356,21 @@ const Tpos = () => {
     setError("");
 
     try {
+      let userLnaddress = process.env.NEXT_PUBLIC_DEFAULT_LNADDRESS
+      // get lnaddress
+      const getLnAddressResp = await getLnAddress(
+        tpoId
+      );
+      if (getLnAddressResp.status != "failure") {
+        userLnaddress = getLnAddressResp.lnaddress
+      }
+      console.log("getLnAddressResp-->", getLnAddressResp)
+      //lnaddress
       const response = await createTposInvoice(
         tpoId,
         sats,
         getInternalMemo() || process.env.NEXT_PUBLIC_TPOS_DEFAULT_MEMO,
-        null,
+        userLnaddress,
         {}
       );
       generateQRCode(response.payment_request);
@@ -458,15 +478,15 @@ const Tpos = () => {
           <ul className="list-none pl-0 mb-0">
             <li className="py-1 flex items-center gap-1">
               <span className="font-bold themeClr">{calculatorIcn}</span>{" "}
-              {`tposID: ${tpoId || "not found"}` }
+              {`tposID: ${tpoId || "not found"}`}
             </li>
             <li className="py-1 flex items-center gap-1">
               <span className="font-bold themeClr">{emailIcn}</span>{" "}
-              {`email: ${email || "not found"}` }
+              {`email: ${email || "not found"}`}
             </li>
             <li className="py-1 flex items-center gap-1">
               <span className="font-bold themeClr">{walletIcn}</span>{" "}
-              {`tpos balance (sats): ${walBal|| "not found"}` }
+              {`tpos balance (sats): ${walBal || "not found"}`}
             </li>
           </ul>
         </div>
