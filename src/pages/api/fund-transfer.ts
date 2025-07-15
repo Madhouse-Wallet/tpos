@@ -149,22 +149,7 @@ export default async function handler(req: any, res: any) {
 
       console.log("tpos usdc invoice-->", invoice)
       if (!invoice?.status) return res.status(400).json({ status: "failure", message: invoice.msg });
-      const apiResponse = await lambdaInvokeFunction(
-        {
-          findData: {
-            email: user.email
-          }, updtData: {
-            $push: {
-              sideshiftIds: {
-                id: finalRoute.shift.id,
-                date: new Date(), // stores the current date/time
-                type: "TposUsdc", // or whatever type value you want to store
-              },
-            },
-          }
-        },
-        "madhouse-backend-production-updtUser"
-      );
+    
 
 
 
