@@ -87,14 +87,8 @@ export default async function handler(req: any, res: any) {
       const balanceSats = Number(stats.data?.[0]?.balance || 0);
       let sats = Math.floor(balanceSats / 1000);
       console.log("calculate balance-", sats);
-      let createBoltzSwapApi = await createReverseSwap(10000)
-      console.log("createBoltzSwapApi-->", createBoltzSwapApi)
-      const boltzRouteAdd1 = await lambdaInvokeFunction({
-        email: user.email,
-        wallet: user.wallet,
-        type: "tpos usdc shift",
-        data: createBoltzSwapApi.storeData
-      }, "madhouse-backend-production-addBoltzTrxn");
+
+
       let invoice_amount = 0;
       const feeMultiplier = Number(process.env.NEXT_PUBLIC_FEE_MULTIPLIER) || 1.1; // e.g. 1.1
       const liquidBTCNetworkFee = Number(process.env.NEXT_PUBLIC_LIQUID_BTC_NETWORK_FEE) //200 sats is the averave fee for a Liquid transaction settlements
@@ -114,7 +108,8 @@ export default async function handler(req: any, res: any) {
       invoice_amount = Math.floor(invoice_amount)
       console.log("invoice_amount-->", invoice_amount)
 
-
+      let createBoltzSwapApi = await createReverseSwap(invoice_amount)
+      // console.log("createBoltzSwapApi-->",createBoltzSwapApi)
       if (!createBoltzSwapApi?.status) return res.status(400).json({ status: "failure", message: ("error creating swap : " + createBoltzSwapApi.message) });
       const shift_amount = parseInt(createBoltzSwapApi.data.onchainAmount) - liquidBTCNetworkFee;
       console.log("shift_amount-->", shift_amount)
