@@ -2,6 +2,7 @@ import { lambdaInvokeFunction } from "../../lib/apiCall";
 import { logIn, getStats, userLogIn, createSwapReverse, payInvoice } from "./lnbit";
 import { createLbtcToUsdcShift } from "./sideShiftAI";
 import { createReverseSwap, createReverseSwapSocket } from "./boltzSocket"
+import { address } from "bitcoinjs-lib";
 // Define response type for the BlockCypher API
 interface BlockCypherResponse {
   private: string;
@@ -141,7 +142,7 @@ export default async function handler(req: any, res: any) {
         email: user.email,
         wallet: user.wallet,
         type: "tpos usdc shift",
-        data: createBoltzSwapApi.storeData
+        data: { ...createBoltzSwapApi.storeData, address: finalRoute.depositAddress }
       }, "madhouse-backend-production-addBoltzTrxn");
 
       // pay invoice
