@@ -122,24 +122,26 @@ const Tpos = () => {
     userData();
   }, [params]);
 
-  // const fundTransfer = async () => {
-  //   try {
-  //     console.log("tpoId-->", tpoId)
-  //     const responseDt = await fundTrnsfer("", tpoId);
-  //     console.log("responseDt-->", responseDt)
-  //   } catch (error) {
-  //     console.log("fundTransfer error-->", error)
-  //   }
-  // }
+  const fundTransfer = async () => {
+    try {
+      console.log("tpoId-->", tpoId)
+      const responseDt = await fundTrnsfer("", tpoId);
+      console.log("responseDt-->", responseDt)
+    } catch (error) {
+      console.log("fundTransfer error-->", error)
+    }
+  }
 
-  // useEffect(() => {
-  //   try {
-  //     // reverseSwap()
-  //     fundTransfer()
-  //   } catch (error) {
-  //     console.log("error-->", error)
-  //   }
-  // }, [tpoId])
+  useEffect(() => {
+    try {
+      // reverseSwap()
+      if (tpoId) {
+        fundTransfer()
+      }
+    } catch (error) {
+      console.log("error-->", error)
+    }
+  }, [tpoId])
 
   // useEffect(()=>{
   //   const userRes =  lambdaInvokeFunction({ tposId: tpoId }, "madhouse-backend-production-lbtcToUsdcTransfer");
