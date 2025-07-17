@@ -20,7 +20,7 @@ export const createTposInvoice = async (
       })
         .then((res) => res.json())
         .then((data) => {
-          console.log("data-->", data);
+          // console.log("data-->", data);
           return data;
         });
     } catch (error) {
@@ -47,7 +47,7 @@ export const getLnAddress = async (
       })
         .then((res) => res.json())
         .then((data) => {
-          console.log("data-->", data);
+          // console.log("data-->", data);
           return data;
         });
     } catch (error) {
@@ -73,7 +73,7 @@ export const payInvoice = async (invoice, address) => {
       })
         .then((res) => res.json())
         .then((data) => {
-          console.log("data-->", data);
+          // console.log("data-->", data);
           return data;
         });
     } catch (error) {
@@ -88,7 +88,7 @@ export const payInvoice = async (invoice, address) => {
 
 export const getUserByEmail = async (email) => {
   try {
-    console.log("Fetching user by email:", email);
+    // console.log("Fetching user by email:", email);
     const response = await fetch(`/api/userDetail?email=${email}`, {
       method: "GET",
       headers: {
@@ -111,7 +111,7 @@ export const getUserByEmail = async (email) => {
 
 export const getUserByWallet = async (wallet) => {
   try {
-    console.log("Fetching user by wallet:", wallet);
+    // console.log("Fetching user by wallet:", wallet);
     const response = await fetch(`/api/userDetail?wallet=${wallet}`, {
       method: "GET",
       headers: {
@@ -134,7 +134,7 @@ export const getUserByWallet = async (wallet) => {
 
 export const getUserByTposID = async (tposId) => {
   try {
-    console.log("Fetching user by tposId:", tposId);
+    // console.log("Fetching user by tposId:", tposId);
     const response = await fetch(`/api/userDetail?tposId=${tposId}`, {
       method: "GET",
       headers: {
@@ -170,7 +170,7 @@ export const fundTrnsfer = async (walletId, tpoId) => {
       })
         .then((res) => res.json())
         .then((data) => {
-          console.log("data-->", data);
+          // console.log("data-->", data);
           return data;
         });
     } catch (error) {
