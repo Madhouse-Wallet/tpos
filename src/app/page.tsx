@@ -14,7 +14,7 @@ export default function Home() {
     setTimeout(() => setLoading(false), 3000);
   }, []);
   const [presale, setPresale] = useState(true);
-  console.log(pathname, "asdfasd");
+  // console.log(pathname, "asdfasd");
 
   return (
     <>

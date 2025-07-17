@@ -71,7 +71,7 @@ export const createReverseSwap = async (invoiceAmount: any) => {
 
     console.log('Swap quote');
     console.log(createdResponse);
-    console.log();
+    // console.log();
     return {
       status: true,
       data: createdResponse,

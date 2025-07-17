@@ -23,7 +23,7 @@ export const lambdaInvokeFunction = async (payload, FUNCTION_NAME) => {
     const result = new TextDecoder().decode(response.Payload);
 
     if (response.LogResult) {
-      console.log("Lambda logs:", Buffer.from(response.LogResult, "base64").toString("ascii"));
+      // console.log("Lambda logs:", Buffer.from(response.LogResult, "base64").toString("ascii"));
     }
 
     // return JSON.parse(result);
@@ -91,7 +91,7 @@ export const getTposTrxn = async (data) => {
     )
       .then((res) => res.json())
       .then((data) => {
-        console.log("line-52", data);
+        // console.log("line-52", data);
         return data;
       });
   } catch (error) {

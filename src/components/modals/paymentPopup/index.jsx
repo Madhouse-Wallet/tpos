@@ -22,7 +22,7 @@ const PaymentPopup = ({
   email,
   sats,
 }) => {
-  console.log("tpoId", tpoId, amount);
+  // console.log("tpoId", tpoId, amount);
   const [copied, setCopied] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const socketRef = useRef(null);
@@ -30,7 +30,7 @@ const PaymentPopup = ({
 
   useEffect(() => {
     if (paymentSuccess) {
-      console.log("api hit-->")
+      // console.log("api hit-->")
       fundTrnsfer(walletId, tpoId);
     }
   }, [paymentSuccess])
@@ -42,9 +42,9 @@ const PaymentPopup = ({
     );
 
     socketRef.current.onmessage = (event) => {
-      console.log("line-event", event);
+      // console.log("line-event", event);
       const data = JSON.parse(event.data);
-      console.log("line-25", data);
+      // console.log("line-25", data);
       if (data.status === "success") {
 
         setPaymentSuccess(true);

@@ -12,7 +12,7 @@ const oxanium = Inter({
 });
 
 const HistoryPopup = ({ historyPop, setHistoryPop, tpoId, user }) => {
-  console.log("line-5", user);
+  // console.log("line-5", user);
 
   const [btcTransactions, setBtcTransactions] = useState([]);
   const [detail, setDetail] = useState(false);

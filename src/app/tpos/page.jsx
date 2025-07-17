@@ -53,7 +53,7 @@ const Tpos = () => {
 
   useEffect(() => {
     if (paymentSuccess) {
-      console.log("api hit-->");
+      // console.log("api hit-->");
       fundTrnsfer("", tpoId);
     }
   }, [paymentSuccess]);
@@ -86,12 +86,12 @@ const Tpos = () => {
     const url = new URL(window.location.href);
 
     const id = params.tpoId || params.id || url.searchParams.get("id");
-    console.log("line-69", id);
+    // console.log("line-69", id);
 
     const userData = async () => {
       const apiResponse = await getUserByTposID(id);
 
-      console.log("line-74", apiResponse);
+      // console.log("line-74", apiResponse);
       if (!apiResponse) {
         return;
       }
@@ -154,7 +154,7 @@ const Tpos = () => {
 
   // Function to handle input received from LottieComponent
   const handleInputReceived = (input) => {
-    console.log("Input received:", input);
+    // console.log("Input received:", input);
     setUserInput(input);
 
     // Close the tap modal
@@ -163,11 +163,11 @@ const Tpos = () => {
     // Validate if it's a valid Ethereum address
     if (isValidEthereumAddress(input.trim())) {
       setEthereumAddress(input.trim());
-      console.log("✅ Valid Ethereum address detected:", input.trim());
+      // console.log("✅ Valid Ethereum address detected:", input.trim());
       // Process the Ethereum payment
       processEthereumPayment(input);
     } else {
-      console.log("⚠️ Invalid Ethereum address format:", input.trim());
+      // console.log("⚠️ Invalid Ethereum address format:", input.trim());
       setError("Invalid Ethereum address format");
       // showToastMessage("Invalid Ethereum address format");
     }
@@ -200,9 +200,9 @@ const Tpos = () => {
   };
 
   const processEthereumPayment = async (address) => {
-    console.log("Processing Ethereum payment for address:", address);
-    console.log("Amount:", formatCurrencyWithoutSign(amount));
-    console.log("Memo:", memo);
+    // console.log("Processing Ethereum payment for address:", address);
+    // console.log("Amount:", formatCurrencyWithoutSign(amount));
+    // console.log("Memo:", memo);
 
     try {
       // Show loader while processing
@@ -223,7 +223,7 @@ const Tpos = () => {
       if (getLnAddressResp.status != "failure") {
         userLnaddress = getLnAddressResp.lnaddress
       }
-      console.log("getLnAddressResp-->", getLnAddressResp)
+      // console.log("getLnAddressResp-->", getLnAddressResp)
       // 2. Generate invoice with user's lnUrlAddress
       const response = await createTposInvoice(
         tpoId,
@@ -239,7 +239,7 @@ const Tpos = () => {
         address // Pass the wallet address
       );
 
-      console.log("Payment result:", result);
+      // console.log("Payment result:", result);
 
       if (result.status === "failure") {
         setError(`Payment failed: ${result.message}`);
@@ -325,7 +325,7 @@ const Tpos = () => {
     // const filteredValue = value.replace(/[^0-9a-fA-Fx]/g, "");
     // Filter out invalid characters instead of blocking the entire input
     const filteredValue = filterHexInput(value, /[^a-zA-Z0-9 ]/g, 100);
-    console.log("line-127", filteredValue.length);
+    // console.log("line-127", filteredValue.length);
 
     // Update the address value with filtered input
     setMemo(filteredValue);
@@ -366,7 +366,7 @@ const Tpos = () => {
       if (getLnAddressResp.status != "failure") {
         userLnaddress = getLnAddressResp.lnaddress
       }
-      console.log("getLnAddressResp-->", getLnAddressResp)
+      // console.log("getLnAddressResp-->", getLnAddressResp)
       //lnaddress
       const response = await createTposInvoice(
         tpoId,
@@ -407,7 +407,7 @@ const Tpos = () => {
     return merchantInfo;
   };
 
-  console.log(activeIndex, "activehover");
+  // console.log(activeIndex, "activehover");
 
   return (
     <>
