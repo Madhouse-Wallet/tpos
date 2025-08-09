@@ -332,8 +332,8 @@ const Tpos = () => {
   };
 
   const tabData = [
-    { title: "Qr Code to Pay", component: "" },
-    { title: "Tap to Pay", component: "" },
+    { title: "Cash App Lightning", component: "" },
+    { title: "Apple Pay", component: "" },
   ];
 
   const handleTab = (key) => {
