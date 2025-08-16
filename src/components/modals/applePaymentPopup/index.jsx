@@ -128,7 +128,7 @@ const ApplePaymentPopup = ({
                       onClick={handleCopyInvoice}
                       className="flex items-center justify-center rounded-xl bg-[#ea611d] text-[14px] w-full p-3"
                     >
-                      {copied ? "Copied!" : "Copy Invoice"}
+                      {copied ? "Copied!" : "Copy Link"}
                     </button>
                   </div>
                 </div>
