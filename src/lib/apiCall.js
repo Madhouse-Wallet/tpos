@@ -2,7 +2,6 @@ import axios from "axios";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 const REGION = process.env.NEXT_PUBLIC_AWS_S3_REGION;
 
-
 export const lambdaInvokeFunction = async (payload, FUNCTION_NAME) => {
   const lambdaClient = new LambdaClient({
     region: REGION,
@@ -25,7 +24,7 @@ export const lambdaInvokeFunction = async (payload, FUNCTION_NAME) => {
     if (response.LogResult) {
       // console.log("Lambda logs:", Buffer.from(response.LogResult, "base64").toString("ascii"));
     }
-
+    console.log("result", JSON.parse(result));
     // return JSON.parse(result);
     const parsed = JSON.parse(result);
     if (parsed.body) {
@@ -33,12 +32,10 @@ export const lambdaInvokeFunction = async (payload, FUNCTION_NAME) => {
     }
 
     return parsed.body || parsed;
-
-
   } catch (error) {
-    console.log("error lambdaInvokeFunction ---->", error)
+    console.log("error lambdaInvokeFunction ---->", error);
   }
-}
+};
 export const createTposInvoice = async (data) => {
   try {
     return await fetch(
@@ -119,5 +116,3 @@ export const getUser = async (data) => {
     return false;
   }
 };
-
- 
