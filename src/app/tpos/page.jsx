@@ -41,6 +41,8 @@ const Tpos = () => {
   const [tpoId, setTpoId] = useState(null);
   const [invoiceData, setInvoiceData] = useState(null);
   const [applePayLink, setApplePayLink] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [abortController, setAbortController] = useState(null); // For cancelling API calls
 
   const [qrCodeImage, setQrCodeImage] = useState("");
   const [error, setError] = useState("");
@@ -371,16 +373,32 @@ const Tpos = () => {
     }
 
     setError("");
+    setLoading(true); // Start loader
+
+    // Create abort controller for this operation
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
       let userLnaddress = process.env.NEXT_PUBLIC_DEFAULT_LNADDRESS;
       // get lnaddress
+
+      // Check if operation was cancelled
+      if (controller.signal.aborted) {
+        return;
+      }
       const getLnAddressResp = await getLnAddress(tpoId);
       if (getLnAddressResp.status != "failure") {
         userLnaddress = getLnAddressResp.lnaddress;
       }
       // console.log("getLnAddressResp-->", getLnAddressResp)
       //lnaddress
+
+      // Check if operation was cancelled
+      if (controller.signal.aborted) {
+        return;
+      }
+
       const response = await createTposInvoice(
         tpoId,
         sats,
@@ -388,12 +406,25 @@ const Tpos = () => {
         userLnaddress,
         {}
       );
+
+      // Check if operation was cancelled
+      if (controller.signal.aborted) {
+        return;
+      }
+
       generateQRCode(response.payment_request);
       setInvoiceData(response);
+      setLoading(false); // Stop loader on success
+
       setPaymentPop(true);
     } catch (err) {
-      console.error("Failed to create invoice:", err);
-      setError(`Failed to create invoice: ${err.message}`);
+      // Don't show error if operation was cancelled
+      if (!controller.signal.aborted) {
+        console.error("Failed to create invoice:", err);
+        setError(`Failed to create invoice: ${err.message}`);
+        setLoading(false); // Stop loader on error
+      }
+      setAbortController(null); // Clear abort controller
     }
   };
 
@@ -407,19 +438,49 @@ const Tpos = () => {
     }
 
     setError("");
+    setLoading(true); // Start loader
+
+    // Create abort controller for this operation
+    const controller = new AbortController();
+    setAbortController(controller);
+
+    // console.log("dollarAmount", dollarAmount);
+    // console.log("amount", amount);
+    // console.log("sats", sats);
+    // console.log("walletAddress", walletAddress);
+
     try {
+      // Check if operation was cancelled
+      if (controller.signal.aborted) {
+        return;
+      }
+
       const response = await createAppleInvoice(dollarAmount, walletAddress);
-      console.log("response", response);
+
+      // Check if operation was cancelled before proceeding
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      // console.log("response", response);
       if (response.status == "failure") {
         setError(`Failed to create invoice.`);
+        setLoading(false); // Stop loader on error
       } else {
         generateQRCode(response.message);
         setApplePayLink(response.message);
+        setLoading(false); // Stop loader on success
+        setAbortController(null); // Clear abort controller
         setApplePaymentPop(true);
       }
     } catch (err) {
-      console.error("Failed to create invoice:", err);
-      setError(`Failed to create invoice: ${err.message}`);
+      // Don't show error if operation was cancelled
+      if (!controller.signal.aborted) {
+        console.error("Failed to create invoice:", err);
+        setError(`Failed to create invoice: ${err.message}`);
+        setLoading(false); // Stop loader on error
+      }
+      setAbortController(null); // Clear abort controller
     }
   };
 
@@ -449,9 +510,42 @@ const Tpos = () => {
   };
 
   // console.log(activeIndex, "activehover");
+  const handleCancelLoading = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+    }
+    setInvoiceData(null);
+    setApplePayLink(null);
+    setQrCodeImage("");
+    setApplePaymentPop(false);
+    setPaymentPop(false);
+    setAmount("");
+    setSats("")
+    setError("");
+    setLoading(false);
+  };
 
   return (
     <>
+      {loading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
+          <div className="bg-white rounded-2xl p-10 max-w-md mx-4 text-center">
+            <div className="flex justify-center items-center mb-6">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#ea611d]"></div>
+            </div>
+            <p className="text-gray-700 mb-6 text-lg font-semibold">
+              Processing payment...
+            </p>
+            <button
+              onClick={() => handleCancelLoading()}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl font-semibold transition duration-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {paymentPop &&
         createPortal(
           <PaymentPopup
