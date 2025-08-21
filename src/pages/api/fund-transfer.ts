@@ -104,7 +104,7 @@ export default async function handler(req: any, res: any) {
         // Ensure room for 10% fee
         invoice_amount = sats / feeMultiplier;
       } else {
-        return res.status(400).json({ status: "failure", message: "Insufficient Balance" })
+        return res.status(400).json({ status: "failure", message: `Insufficient Balance ${sats}` })
       }
       invoice_amount = Math.floor(invoice_amount)
       console.log("invoice_amount-->", invoice_amount)
