@@ -33,16 +33,43 @@ export const createTposInvoice = async (
   }
 };
 
-export const getLnAddress = async (
-  tpoId
+export const createAppleInvoice = async (
+  amount,
+  address,
 ) => {
+  try {
+    try {
+      return await fetch(`/api/createAppleInvoice`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,
+          address,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          // console.log("data-->", data);
+          return data;
+        });
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
+  } catch (error) {
+    console.log("createInvoice error-->", error);
+    return false;
+  }
+};
+
+export const getLnAddress = async (tpoId) => {
   try {
     try {
       return await fetch(`/api/getLnAddress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tpoId
+          tpoId,
         }),
       })
         .then((res) => res.json())
@@ -165,7 +192,8 @@ export const fundTrnsfer = async (walletId, tpoId) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          walletId, tpoId
+          walletId,
+          tpoId,
         }),
       })
         .then((res) => res.json())
@@ -183,15 +211,24 @@ export const fundTrnsfer = async (walletId, tpoId) => {
   }
 };
 
-
-export const walletBal = async (lnbitLinkId_2, lnbitLinkId, lnbitWalletId, lnbitWalletId_2, tposId) => {
+export const walletBal = async (
+  lnbitLinkId_2,
+  lnbitLinkId,
+  lnbitWalletId,
+  lnbitWalletId_2,
+  tposId
+) => {
   try {
     try {
       return await fetch(`/api/userWalletBal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lnbitLinkId_2, lnbitLinkId, lnbitWalletId, lnbitWalletId_2, tposId
+          lnbitLinkId_2,
+          lnbitLinkId,
+          lnbitWalletId,
+          lnbitWalletId_2,
+          tposId,
         }),
       })
         .then((res) => res.json())

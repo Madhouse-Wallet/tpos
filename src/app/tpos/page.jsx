@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import PaymentPopup from "@/components/modals/paymentPopup";
+import ApplePaymentPopup from "@/components/modals/applePaymentPopup";
 import HistoryPopup from "@/components/modals/HistoryPopup";
 import animationData from "./taptoPay.json";
 import LottieComponent from "./TaptoPayanimation";
@@ -11,6 +12,7 @@ import { lambdaInvokeFunction } from "../../lib/apiCall";
 import QRCode from "qrcode";
 import {
   createTposInvoice,
+  createAppleInvoice,
   getLnAddress,
   getUserByEmail,
   getUserByTposID,
@@ -25,16 +27,23 @@ import { fundTrnsfer } from "../../services/apiService";
 const Tpos = () => {
   const [activeIndex, setActiveIndex] = useState(null);
   const [amount, setAmount] = useState("");
+  const [dollarAmount, setDollarAmount] = useState("");
   const [memo, setMemo] = useState("");
   const [tab, setTab] = useState(0);
   const [paymentPop, setPaymentPop] = useState(false);
+  const [applePaymentPop, setApplePaymentPop] = useState(false);
   const [historyPop, setHistoryPop] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const [email, setEmail] = useState("");
+  const [walletAddress, setWallettAddress] = useState("");
   const [walletId, setWalletId] = useState("");
   const [walBal, setWalBal] = useState(0);
   const [tpoId, setTpoId] = useState(null);
   const [invoiceData, setInvoiceData] = useState(null);
+  const [applePayLink, setApplePayLink] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [abortController, setAbortController] = useState(null); // For cancelling API calls
+
   const [qrCodeImage, setQrCodeImage] = useState("");
   const [error, setError] = useState("");
   const [user, setUser] = useState("");
@@ -104,6 +113,7 @@ const Tpos = () => {
       );
       const email = apiResponse?.email;
       const wallet = apiResponse?.lnbitWalletId;
+      setWallettAddress(apiResponse?.wallet);
       if (id) setTpoId(id);
       if (email) setEmail(email);
       if (wallet) setWalletId(wallet);
@@ -214,14 +224,12 @@ const Tpos = () => {
       if (!existingUser) {
         throw new Error("User not found for this wallet address");
       }
-      // get lnaddress 
-      let userLnaddress = process.env.NEXT_PUBLIC_DEFAULT_LNADDRESS
       // get lnaddress
-      const getLnAddressResp = await getLnAddress(
-        tpoId
-      );
+      let userLnaddress = process.env.NEXT_PUBLIC_DEFAULT_LNADDRESS;
+      // get lnaddress
+      const getLnAddressResp = await getLnAddress(tpoId);
       if (getLnAddressResp.status != "failure") {
-        userLnaddress = getLnAddressResp.lnaddress
+        userLnaddress = getLnAddressResp.lnaddress;
       }
       // console.log("getLnAddressResp-->", getLnAddressResp)
       // 2. Generate invoice with user's lnUrlAddress
@@ -266,7 +274,6 @@ const Tpos = () => {
         margin: 0.5,
       });
       setQrCodeImage(qr);
-      setPaymentPop(true);
     } catch (err) {
       console.error("QR Code generation failed:", err);
       setError("Failed to generate QR code");
@@ -289,8 +296,18 @@ const Tpos = () => {
     const cents = value.padStart(3, "0"); // ensure at least 3 digits
     const dollars = cents.slice(0, -2);
     const decimal = cents.slice(-2);
+
     return `$${parseInt(dollars, 10)}.${decimal}`;
   };
+
+  // Whenever "value" changes, update dollarAmount once
+  useEffect(() => {
+    const cents = amount.padStart(3, "0");
+    const dollars = cents.slice(0, -2);
+    const decimal = cents.slice(-2);
+    const floatValue = `${parseInt(dollars, 10)}.${decimal}`;
+    setDollarAmount(floatValue);
+  }, [amount]);
 
   const formatCurrencyWithoutSign = (value) => {
     const cents = value.padStart(3, "0"); // ensure at least 3 digits
@@ -356,18 +373,32 @@ const Tpos = () => {
     }
 
     setError("");
+    setLoading(true); // Start loader
+
+    // Create abort controller for this operation
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
-      let userLnaddress = process.env.NEXT_PUBLIC_DEFAULT_LNADDRESS
+      let userLnaddress = process.env.NEXT_PUBLIC_DEFAULT_LNADDRESS;
       // get lnaddress
-      const getLnAddressResp = await getLnAddress(
-        tpoId
-      );
+
+      // Check if operation was cancelled
+      if (controller.signal.aborted) {
+        return;
+      }
+      const getLnAddressResp = await getLnAddress(tpoId);
       if (getLnAddressResp.status != "failure") {
-        userLnaddress = getLnAddressResp.lnaddress
+        userLnaddress = getLnAddressResp.lnaddress;
       }
       // console.log("getLnAddressResp-->", getLnAddressResp)
       //lnaddress
+
+      // Check if operation was cancelled
+      if (controller.signal.aborted) {
+        return;
+      }
+
       const response = await createTposInvoice(
         tpoId,
         sats,
@@ -375,11 +406,81 @@ const Tpos = () => {
         userLnaddress,
         {}
       );
+
+      // Check if operation was cancelled
+      if (controller.signal.aborted) {
+        return;
+      }
+
       generateQRCode(response.payment_request);
       setInvoiceData(response);
+      setLoading(false); // Stop loader on success
+
+      setPaymentPop(true);
     } catch (err) {
-      console.error("Failed to create invoice:", err);
-      setError(`Failed to create invoice: ${err.message}`);
+      // Don't show error if operation was cancelled
+      if (!controller.signal.aborted) {
+        console.error("Failed to create invoice:", err);
+        setError(`Failed to create invoice: ${err.message}`);
+        setLoading(false); // Stop loader on error
+      }
+      setAbortController(null); // Clear abort controller
+    }
+  };
+
+  const createAppleInvoiceAndShowQR = async () => {
+    if (!amount || parseInt(amount) <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    } else if (!amount || parseInt(amount) > 24000000) {
+      setError("Amount cannot be more than 24000000.");
+      return;
+    }
+
+    setError("");
+    setLoading(true); // Start loader
+
+    // Create abort controller for this operation
+    const controller = new AbortController();
+    setAbortController(controller);
+
+    // console.log("dollarAmount", dollarAmount);
+    // console.log("amount", amount);
+    // console.log("sats", sats);
+    // console.log("walletAddress", walletAddress);
+
+    try {
+      // Check if operation was cancelled
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      const response = await createAppleInvoice(dollarAmount, walletAddress);
+
+      // Check if operation was cancelled before proceeding
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      // console.log("response", response);
+      if (response.status == "failure") {
+        setError(`Failed to create invoice.`);
+        setLoading(false); // Stop loader on error
+      } else {
+        generateQRCode(response.message);
+        setApplePayLink(response.message);
+        setLoading(false); // Stop loader on success
+        setAbortController(null); // Clear abort controller
+        setApplePaymentPop(true);
+      }
+    } catch (err) {
+      // Don't show error if operation was cancelled
+      if (!controller.signal.aborted) {
+        console.error("Failed to create invoice:", err);
+        setError(`Failed to create invoice: ${err.message}`);
+        setLoading(false); // Stop loader on error
+      }
+      setAbortController(null); // Clear abort controller
     }
   };
 
@@ -390,7 +491,8 @@ const Tpos = () => {
       createInvoiceAndShowQR();
     } else {
       // Tap to Pay tab - start Ethereum tap to pay
-      startTapToPay();
+      // startTapToPay();
+      createAppleInvoiceAndShowQR();
     }
 
     setActiveIndex("ok");
@@ -408,9 +510,42 @@ const Tpos = () => {
   };
 
   // console.log(activeIndex, "activehover");
+  const handleCancelLoading = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+    }
+    setInvoiceData(null);
+    setApplePayLink(null);
+    setQrCodeImage("");
+    setApplePaymentPop(false);
+    setPaymentPop(false);
+    setAmount("");
+    setSats("")
+    setError("");
+    setLoading(false);
+  };
 
   return (
     <>
+      {loading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
+          <div className="bg-white rounded-2xl p-10 max-w-md mx-4 text-center">
+            <div className="flex justify-center items-center mb-6">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#ea611d]"></div>
+            </div>
+            <p className="text-gray-700 mb-6 text-lg font-semibold">
+              Processing payment...
+            </p>
+            <button
+              onClick={() => handleCancelLoading()}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl font-semibold transition duration-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {paymentPop &&
         createPortal(
           <PaymentPopup
@@ -420,6 +555,23 @@ const Tpos = () => {
             tpoId={tpoId}
             qrCodeImage={qrCodeImage}
             invoiceData={invoiceData}
+            amount={amount}
+            memo={memo}
+            walletId={walletId}
+            email={email}
+            sats={sats}
+          />,
+          document.body
+        )}
+      {applePaymentPop &&
+        createPortal(
+          <ApplePaymentPopup
+            setAmount={setAmount}
+            applePaymentPop={applePaymentPop}
+            setApplePaymentPop={setApplePaymentPop}
+            tpoId={tpoId}
+            qrCodeImage={qrCodeImage}
+            applePayLink={applePayLink}
             amount={amount}
             memo={memo}
             walletId={walletId}
@@ -513,10 +665,11 @@ const Tpos = () => {
                       <button
                         key={key}
                         onClick={() => handleTab(key)}
-                        className={`${tab == key
-                          ? "opacity-100 bg-[#ea611d] text-white"
-                          : "text-black bg-[#ddd]"
-                          } flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl text-[14px] p-3`}
+                        className={`${
+                          tab == key
+                            ? "opacity-100 bg-[#ea611d] text-white"
+                            : "text-black bg-[#ddd]"
+                        } flex items-center w-full rounded-full justify-center font-semibold min-w-[130px] rounded-xl text-[14px] p-3`}
                       >
                         {item.title}
                       </button>
@@ -537,8 +690,9 @@ const Tpos = () => {
                     <button
                       key={val}
                       onClick={() => handleClick(val, index)}
-                      className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${activeIndex === val ? "bg-[#000]" : "bg-[#ea611d]"
-                        }`}
+                      className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
+                        activeIndex === val ? "bg-[#000]" : "bg-[#ea611d]"
+                      }`}
                     >
                       {val}
                     </button>
@@ -547,8 +701,9 @@ const Tpos = () => {
                   {/* OK Button */}
                   <button
                     onClick={handleOkClick}
-                    className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold items-center justify-center rounded-xl transition duration-[400ms] ${activeIndex === "ok" ? "bg-[#000]" : "bg-green-500 "
-                      }`}
+                    className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold items-center justify-center rounded-xl transition duration-[400ms] ${
+                      activeIndex === "ok" ? "bg-[#000]" : "bg-green-500 "
+                    }`}
                   >
                     OK
                   </button>
@@ -557,8 +712,9 @@ const Tpos = () => {
                     <button
                       key={val}
                       onClick={() => handleClick(val, index)}
-                      className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${activeIndex === val ? "bg-[#000]" : "bg-[#ea611d]"
-                        }`}
+                      className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
+                        activeIndex === val ? "bg-[#000]" : "bg-[#ea611d]"
+                      }`}
                     >
                       {val}
                     </button>
@@ -567,8 +723,9 @@ const Tpos = () => {
                   {/* Clear Button */}
                   <button
                     onClick={handleClear}
-                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${activeIndex === "clear" ? "bg-[#000]" : "bg-[#ea611d]"
-                      }`}
+                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
+                      activeIndex === "clear" ? "bg-[#000]" : "bg-[#ea611d]"
+                    }`}
                   >
                     C
                   </button>
@@ -576,8 +733,9 @@ const Tpos = () => {
                   {/* 0 Button */}
                   <button
                     onClick={() => handleClick("0")}
-                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${activeIndex === "0" ? "bg-[#000]" : "bg-[#ea611d]"
-                      }`}
+                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
+                      activeIndex === "0" ? "bg-[#000]" : "bg-[#ea611d]"
+                    }`}
                   >
                     0
                   </button>
@@ -585,8 +743,9 @@ const Tpos = () => {
                   {/* Backspace Button */}
                   <button
                     onClick={handleBackspace}
-                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${activeIndex === "backspace" ? "bg-[#000]" : "bg-[#ea611d]"
-                      }`}
+                    className={`flex text-xl text-whute font-semibold items-center justify-center rounded-[40px] transition-colors duration-300 min-h-[55px] h-full px-6 ${
+                      activeIndex === "backspace" ? "bg-[#000]" : "bg-[#ea611d]"
+                    }`}
                   >
                     {backIcn}
                   </button>
