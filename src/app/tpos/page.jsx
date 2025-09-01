@@ -349,8 +349,8 @@ const Tpos = () => {
   };
 
   const tabData = [
-    { title: "Cash App Lightning", component: "" },
-    { title: "Apple Pay", component: "" },
+    { title: "Mobile Money", component: "" },
+    { title: "Debit Card", component: "" },
   ];
 
   const handleTab = (key) => {
