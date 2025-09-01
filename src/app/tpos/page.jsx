@@ -653,7 +653,7 @@ const Tpos = () => {
                     {formatCurrency(amount)}
                   </h4>
                   <p className="mb-0 mt-4 font-medium text-[20px]">
-                    {sats} sat
+                    {sats} KES
                   </p>
                   {error && (
                     <p className="text-red-500 mt-2 errorMessage">{error}</p>
