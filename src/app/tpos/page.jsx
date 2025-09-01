@@ -677,7 +677,7 @@ const Tpos = () => {
                   </div>
                   <div className="">
                     <input
-                      placeholder="Memo"
+                      placeholder="Country"
                       type="text"
                       value={memo}
                       onChange={handleMemoChange}
