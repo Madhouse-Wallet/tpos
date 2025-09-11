@@ -8,6 +8,7 @@ import animationData from "./taptoPay.json";
 import LottieComponent from "./TaptoPayanimation";
 import { useParams, useRouter } from "next/navigation";
 import { lambdaInvokeFunction } from "../../lib/apiCall";
+import { currencyData } from "../../utils/currencyData";
 
 import QRCode from "qrcode";
 import {
@@ -16,6 +17,7 @@ import {
   getLnAddress,
   getUserByEmail,
   getUserByTposID,
+  getCurrencyList,
   walletBal,
   getUserByWallet,
   payInvoice,
@@ -43,7 +45,7 @@ const Tpos = () => {
   const [applePayLink, setApplePayLink] = useState(null);
   const [loading, setLoading] = useState(false);
   const [abortController, setAbortController] = useState(null); // For cancelling API calls
-
+  const [priceList, setPriceList] = useState({});
   const [qrCodeImage, setQrCodeImage] = useState("");
   const [error, setError] = useState("");
   const [user, setUser] = useState("");
@@ -54,11 +56,31 @@ const Tpos = () => {
   const [showTapModal, setShowTapModal] = useState(false);
   const [userInput, setUserInput] = useState("");
 
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedCountryData, setSelectedCountryData] = useState("");
+  const [selectedUsdAmount, setSelectedUsdAmount] = useState(0);
+  // console.log("selectedCountry -->", selectedCountry);
+  const handleCountryChange = (e) => {
+    const countryCode = e.target.value;
+    setSelectedCountry(countryCode);
+
+    // Pass the country code to your coinbase pay lambda
+    // You can access the selected country's full data like this:
+    const selectedCountryDataChk = currencyData.find(
+      (item) => item["Country id"] === countryCode
+    );
+    setSelectedCountryData(selectedCountryDataChk);
+    // console.log("Selected country:", selectedCountryDataChk);
+
+    // Call your lambda function with the country code parameter
+    // callCoinbasePayLambda({ countryCode, ...otherParams });
+  }; 
   // Get URL parameters
   const params = useParams();
   const router = useRouter();
 
   const [sats, setSats] = useState(null);
+  const [currencyValue, setCurrencyValue] = useState(0);
 
   useEffect(() => {
     if (paymentSuccess) {
@@ -66,6 +88,22 @@ const Tpos = () => {
       fundTrnsfer("", tpoId);
     }
   }, [paymentSuccess]);
+  const convertUSDToCurrency = (usdAmount, selectedCountryData, priceList) => {
+    if (!selectedCountryData || !priceList || !usdAmount) {
+      return 0;
+    }
+
+    const currencyCode = selectedCountryData["Currency id"].toLowerCase(); // Convert to lowercase for priceList lookup
+    const exchangeRate = priceList[currencyCode];
+
+    if (!exchangeRate) {
+      console.warn(`Exchange rate not found for currency: ${currencyCode}`);
+      return usdAmount; // Return original USD amount if rate not found
+    }
+
+    const convertedAmount = usdAmount * exchangeRate;
+    return convertedAmount;
+  };
   useEffect(() => {
     async function fetchSats() {
       try {
@@ -74,6 +112,7 @@ const Tpos = () => {
         const btcPriceUsd = data?.bitcoin?.usd;
         if (!btcPriceUsd) throw new Error("BTC price not found");
         const usdAmount = formatCurrencyWithoutSign(amount);
+
         const calculatedSats = Math.ceil(
           (usdAmount / btcPriceUsd) * 100_000_000
         );
@@ -88,8 +127,20 @@ const Tpos = () => {
       }
     }
 
-    fetchSats();
+    // fetchSats();
   }, [amount]);
+
+  useEffect(() => {
+    // console.log("selectedCountryData or priceList changed", selectedUsdAmount);
+    if (selectedCountryData && priceList && selectedUsdAmount) {
+      const convertedValue = convertUSDToCurrency(
+        selectedUsdAmount,
+        selectedCountryData,
+        priceList
+      );
+      setCurrencyValue(convertedValue);
+    }
+  }, [selectedUsdAmount, selectedCountryData, priceList]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -98,26 +149,33 @@ const Tpos = () => {
     // console.log("line-69", id);
 
     const userData = async () => {
-      const apiResponse = await getUserByTposID(id);
+      // const apiResponse = await getUserByTposID(id);
+      const apiResponse = await getUserByWallet(id);
+
+      const currencyList = await getCurrencyList();
+      // console.log("currencyList", currencyList);
+      if (currencyList?.usd) {
+        setPriceList(currencyList?.usd);
+      }
 
       // console.log("line-74", apiResponse);
       if (!apiResponse) {
         return;
       }
-      const walletBalStats = await walletBal(
-        apiResponse?.lnbitLinkId_2,
-        apiResponse?.lnbitLinkId,
-        apiResponse?.lnbitWalletId,
-        apiResponse?.lnbitWalletId_2,
-        id
-      );
+      // const walletBalStats = await walletBal(
+      //   apiResponse?.lnbitLinkId_2,
+      //   apiResponse?.lnbitLinkId,
+      //   apiResponse?.lnbitWalletId,
+      //   apiResponse?.lnbitWalletId_2,
+      //   id
+      // );
       const email = apiResponse?.email;
-      const wallet = apiResponse?.lnbitWalletId;
+      // const wallet = apiResponse?.lnbitWalletId;
       setWallettAddress(apiResponse?.wallet);
       if (id) setTpoId(id);
       if (email) setEmail(email);
-      if (wallet) setWalletId(wallet);
-      if (walletBalStats) setWalBal(walletBalStats);
+      if (id) setWalletId(id);
+      // if (walletBalStats) setWalBal(walletBalStats);
       if (!email) {
         return;
       }
@@ -285,7 +343,16 @@ const Tpos = () => {
 
     const newAmount = amount + digit;
     setAmount(newAmount);
-
+    let finalAmount = getNumericValueFromFormattedCurrency(newAmount);
+    setSelectedUsdAmount(finalAmount);
+    if (selectedCountryData && priceList) {
+      const convertedValue = convertUSDToCurrency(
+        finalAmount,
+        selectedCountryData,
+        priceList
+      );
+      setCurrencyValue(convertedValue);
+    }
     // Set active index for black background flash
     setActiveIndex(digit);
     setTimeout(() => {
@@ -298,6 +365,16 @@ const Tpos = () => {
     const decimal = cents.slice(-2);
 
     return `$${parseInt(dollars, 10)}.${decimal}`;
+  };
+
+  const getNumericValueFromFormattedCurrency = (value) => {
+    const cents = value.padStart(3, "0");
+    const dollars = cents.slice(0, -2);
+    const decimal = cents.slice(-2);
+
+    // Convert to float: combine dollars and cents
+    const numericValue = parseFloat(`${parseInt(dollars, 10)}.${decimal}`);
+    return numericValue;
   };
 
   // Whenever "value" changes, update dollarAmount once
@@ -318,6 +395,8 @@ const Tpos = () => {
 
   const handleClear = () => {
     setAmount("");
+    setCurrencyValue(0);
+    setSelectedUsdAmount(0);
     setActiveIndex("clear");
     setTimeout(() => {
       setActiveIndex(null);
@@ -521,7 +600,7 @@ const Tpos = () => {
     setApplePaymentPop(false);
     setPaymentPop(false);
     setAmount("");
-    setSats("")
+    setSats("");
     setError("");
     setLoading(false);
   };
@@ -622,13 +701,13 @@ const Tpos = () => {
           </>
         )}
 
-        <button
+        {/* <button
           onClick={() => setHistoryPop(!historyPop)}
           className="transactionBtn  absolute top-2 right-2 flex items-center justify-center h-[45px] w-[45px] bg-[#ea611d] transition duration-[400ms] hover:bg-[#000] rounded-full shadow"
         >
           {historyIcn}
-        </button>
-        <div className="absolute top-2 left-2 text-xs inline-flex mb-4 items-center gap-2 rounded px-3 py-1 bg-black/50 text-left">
+        </button> */}
+        {/* <div className="absolute top-2 left-2 text-xs inline-flex mb-4 items-center gap-2 rounded px-3 py-1 bg-black/50 text-left">
           <ul className="list-none pl-0 mb-0">
             <li className="py-1 flex items-center gap-1">
               <span className="font-bold themeClr">{calculatorIcn}</span>{" "}
@@ -643,7 +722,7 @@ const Tpos = () => {
               {`tpos balance (sats): ${walBal || "not found"}`}
             </li>
           </ul>
-        </div>
+        </div> */}
         <div className="container px-3 h-full">
           <div className="grid gap-3 grid-cols-12 h-full pt-[60px] sm:pt-0">
             <div className="col-span-12 h-full">
@@ -652,9 +731,17 @@ const Tpos = () => {
                   <h4 className="m-0 font-semibold text-4xl">
                     {formatCurrency(amount)}
                   </h4>
-                  <p className="mb-0 mt-4 font-medium text-[20px]">
+                  {/* <p className="mb-0 mt-4 font-medium text-[20px]">
                     {sats} sat
-                  </p>
+                  </p> */}
+                  {selectedCountryData && (
+                    <p className="mb-0 mt-4 font-medium text-[20px]">
+                      {currencyValue}{" "}
+                      {selectedCountryData
+                        ? selectedCountryData["Currency id"]
+                        : ""}
+                    </p>
+                  )}
                   {error && (
                     <p className="text-red-500 mt-2 errorMessage">{error}</p>
                   )}
@@ -676,13 +763,30 @@ const Tpos = () => {
                     ))}
                   </div>
                   <div className="">
-                    <input
+                    {/* <input
                       placeholder="Memo"
                       type="text"
                       value={memo}
                       onChange={handleMemoChange}
                       className="border-[#8c8c8c] bg-[#fff] text-black flex text-[14px] font-semibold w-full border-px md:border-hpx px-5 py-2 h-12 rounded-full outline-0"
-                    />
+                    /> */}
+                    <select
+                      value={selectedCountry}
+                      onChange={handleCountryChange}
+                      className="border-[#8c8c8c] bg-[#fff] text-black flex text-[14px] font-semibold w-full border-px md:border-hpx px-5 py-2 h-12 rounded-full outline-0 appearance-none cursor-pointer"
+                    >
+                      <option value="" disabled>
+                        Select a country
+                      </option>
+                      {currencyData.map((item) => (
+                        <option
+                          key={item["Country id"]}
+                          value={item["Country id"]}
+                        >
+                          {item.country} ({item["Currency id"]})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="keyPad w-full grid gap-2 grid-cols-4 grid-rows-4 min-h-[40vh] p-3 max-w-[600px] mx-auto">
@@ -700,7 +804,8 @@ const Tpos = () => {
 
                   {/* OK Button */}
                   <button
-                    onClick={handleOkClick}
+                    // onClick={handleOkClick}
+                  
                     className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold items-center justify-center rounded-xl transition duration-[400ms] ${
                       activeIndex === "ok" ? "bg-[#000]" : "bg-green-500 "
                     }`}

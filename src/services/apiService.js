@@ -182,6 +182,25 @@ export const getUserByTposID = async (tposId) => {
   }
 };
 
+
+
+export const getCurrencyList = async () => {
+  try {
+    const response = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching currency data:', error);
+    throw error;
+  }
+};
+
+
 //lnbitLinkId_2, lnbitLinkId, lnbitWalletId, lnbitWalletId_2, tposId
 
 // fund-transfer
