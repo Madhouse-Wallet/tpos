@@ -428,8 +428,8 @@ const Tpos = () => {
   };
 
   const tabData = [
-    { title: "Cash App Lightning", component: "" },
-    { title: "Apple Pay", component: "" },
+    { title: "Mobile Money", component: "" },
+    { title: "Debit Card", component: "" },
   ];
 
   const handleTab = (key) => {
@@ -508,6 +508,7 @@ const Tpos = () => {
   };
 
   const createAppleInvoiceAndShowQR = async () => {
+
     if (!amount || parseInt(amount) <= 0) {
       setError("Please enter a valid amount");
       return;
@@ -533,7 +534,8 @@ const Tpos = () => {
       if (controller.signal.aborted) {
         return;
       }
-
+console.log("dollarAmount-->", dollarAmount);
+console.log("walletAddress-->", walletAddress);
       const response = await createAppleInvoice(dollarAmount, walletAddress);
 
       // Check if operation was cancelled before proceeding
@@ -804,7 +806,7 @@ const Tpos = () => {
 
                   {/* OK Button */}
                   <button
-                    // onClick={handleOkClick}
+                    onClick={handleOkClick}
                   
                     className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold items-center justify-center rounded-xl transition duration-[400ms] ${
                       activeIndex === "ok" ? "bg-[#000]" : "bg-green-500 "
