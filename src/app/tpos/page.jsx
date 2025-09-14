@@ -142,7 +142,12 @@ const Tpos = () => {
         selectedCountryData,
         priceList
       );
-      setCurrencyValue(convertedValue);
+      setCurrencyValue(
+        parseFloat(convertedValue) < 0.01
+              ? "0"
+              : parseFloat(convertedValue).toFixed(2)
+        
+        );
     }
   }, [selectedUsdAmount, selectedCountryData, priceList]);
 
