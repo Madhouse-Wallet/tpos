@@ -33,10 +33,7 @@ export const createTposInvoice = async (
   }
 };
 
-export const createAppleInvoice = async (
-  amount,
-  address,
-) => {
+export const createAppleInvoice = async (amount, address, currency, country) => {
   try {
     try {
       return await fetch(`/api/createAppleInvoice`, {
@@ -45,6 +42,8 @@ export const createAppleInvoice = async (
         body: JSON.stringify({
           amount,
           address,
+          currency,
+          country,
         }),
       })
         .then((res) => res.json())
@@ -182,24 +181,23 @@ export const getUserByTposID = async (tposId) => {
   }
 };
 
-
-
 export const getCurrencyList = async () => {
   try {
-    const response = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json');
-    
+    const response = await fetch(
+      "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json"
+    );
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching currency data:', error);
+    console.error("Error fetching currency data:", error);
     throw error;
   }
 };
-
 
 //lnbitLinkId_2, lnbitLinkId, lnbitWalletId, lnbitWalletId_2, tposId
 

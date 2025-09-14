@@ -6,9 +6,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { amount, address } = req.body;
+    const { amount, address, currency, country } = req.body;
 
-    console.log("line-20", amount, address);
+    console.log("line-20", amount, address, currency, country);
 
     if (!amount) {
       return res.status(400).json({
@@ -22,6 +22,8 @@ export default async function handler(req, res) {
       {
         amount,
         address,
+        currency,
+         country
       },
       "coinbase-pay-dev-call"
     );
@@ -43,7 +45,11 @@ export default async function handler(req, res) {
     }
 
     // Check if the API returned an error
-    if (apiResponse.error || apiResponse.message == "Error" || apiResponse.errorType) {
+    if (
+      apiResponse.error ||
+      apiResponse.message == "Error" ||
+      apiResponse.errorType
+    ) {
       return res.status(500).json({
         status: "failure",
         message: apiResponse.error || "",
@@ -55,7 +61,6 @@ export default async function handler(req, res) {
     if (apiResponse.message != "Error") {
       return res.status(200).json(apiResponse);
     }
-
   } catch (error) {
     console.error("Error creating TPOS invoice:", error);
     return res.status(500).json({

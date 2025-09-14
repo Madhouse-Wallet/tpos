@@ -56,10 +56,13 @@ const Tpos = () => {
   const [showTapModal, setShowTapModal] = useState(false);
   const [userInput, setUserInput] = useState("");
 
-  const [selectedCountry, setSelectedCountry] = useState("");
-  const [selectedCountryData, setSelectedCountryData] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState(
+    currencyData[2]["Country id"]
+  );
+  const [selectedCountryData, setSelectedCountryData] = useState(
+    currencyData[2]
+  );
   const [selectedUsdAmount, setSelectedUsdAmount] = useState(0);
-  // console.log("selectedCountry -->", selectedCountry);
   const handleCountryChange = (e) => {
     const countryCode = e.target.value;
     setSelectedCountry(countryCode);
@@ -74,7 +77,7 @@ const Tpos = () => {
 
     // Call your lambda function with the country code parameter
     // callCoinbasePayLambda({ countryCode, ...otherParams });
-  }; 
+  };
   // Get URL parameters
   const params = useParams();
   const router = useRouter();
@@ -88,6 +91,7 @@ const Tpos = () => {
       fundTrnsfer("", tpoId);
     }
   }, [paymentSuccess]);
+
   const convertUSDToCurrency = (usdAmount, selectedCountryData, priceList) => {
     if (!selectedCountryData || !priceList || !usdAmount) {
       return 0;
@@ -330,6 +334,11 @@ const Tpos = () => {
     try {
       const qr = await QRCode.toDataURL(paymentRequest, {
         margin: 0.5,
+        width: 512,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFF",
+        },
       });
       setQrCodeImage(qr);
     } catch (err) {
@@ -508,7 +517,6 @@ const Tpos = () => {
   };
 
   const createAppleInvoiceAndShowQR = async () => {
-
     if (!amount || parseInt(amount) <= 0) {
       setError("Please enter a valid amount");
       return;
@@ -534,9 +542,20 @@ const Tpos = () => {
       if (controller.signal.aborted) {
         return;
       }
-console.log("dollarAmount-->", dollarAmount);
-console.log("walletAddress-->", walletAddress);
-      const response = await createAppleInvoice(dollarAmount, walletAddress);
+      console.log("dollarAmount-->", dollarAmount);
+      console.log("currencyValue-->", Number(currencyValue).toFixed(2));
+      console.log("walletAddress-->", walletAddress);
+      console.log(
+        "selectedCountryData-->",
+        selectedCountryData["Currency id"],
+        selectedCountryData["Country id"]
+      );
+      const response = await createAppleInvoice(
+        Number(currencyValue).toFixed(2),
+        walletAddress,
+        selectedCountryData["Currency id"],
+        selectedCountryData["Country id"]
+      );
 
       // Check if operation was cancelled before proceeding
       if (controller.signal.aborted) {
@@ -807,7 +826,6 @@ console.log("walletAddress-->", walletAddress);
                   {/* OK Button */}
                   <button
                     onClick={handleOkClick}
-                  
                     className={`row-start-1 row-end-5 col-start-4 col-end-5 flex text-xl text-white font-semibold items-center justify-center rounded-xl transition duration-[400ms] ${
                       activeIndex === "ok" ? "bg-[#000]" : "bg-green-500 "
                     }`}
