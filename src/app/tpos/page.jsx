@@ -547,14 +547,14 @@ const Tpos = () => {
       if (controller.signal.aborted) {
         return;
       }
-      console.log("dollarAmount-->", dollarAmount);
-      console.log("currencyValue-->", Number(currencyValue).toFixed(2));
-      console.log("walletAddress-->", walletAddress);
-      console.log(
-        "selectedCountryData-->",
-        selectedCountryData["Currency id"],
-        selectedCountryData["Country id"]
-      );
+      // console.log("dollarAmount-->", dollarAmount);
+      // console.log("currencyValue-->", Number(currencyValue).toFixed(2));
+      // console.log("walletAddress-->", walletAddress);
+      // console.log(
+      //   "selectedCountryData-->",
+      //   selectedCountryData["Currency id"],
+      //   selectedCountryData["Country id"]
+      // );
       const response = await createAppleInvoice(
         Number(currencyValue).toFixed(2),
         walletAddress,
