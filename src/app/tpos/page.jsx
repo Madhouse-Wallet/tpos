@@ -144,10 +144,9 @@ const Tpos = () => {
       );
       setCurrencyValue(
         parseFloat(convertedValue) < 0.01
-              ? "0"
-              : parseFloat(convertedValue).toFixed(2)
-        
-        );
+          ? "0"
+          : parseFloat(convertedValue).toFixed(2)
+      );
     }
   }, [selectedUsdAmount, selectedCountryData, priceList]);
 
@@ -442,7 +441,7 @@ const Tpos = () => {
   };
 
   const tabData = [
-    { title: "Mobile Money", component: "" },
+    // { title: "Mobile Money", component: "" },
     { title: "Debit Card", component: "" },
   ];
 
@@ -593,11 +592,12 @@ const Tpos = () => {
   const handleOkClick = () => {
     if (tab === 0) {
       // Qr Code to Pay tab
-      createInvoiceAndShowQR();
+      // createInvoiceAndShowQR();
+      createAppleInvoiceAndShowQR();
     } else {
       // Tap to Pay tab - start Ethereum tap to pay
       // startTapToPay();
-      createAppleInvoiceAndShowQR();
+      // createAppleInvoiceAndShowQR();
     }
 
     setActiveIndex("ok");
