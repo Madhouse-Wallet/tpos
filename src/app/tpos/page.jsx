@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import PaymentPopup from "@/components/modals/paymentPopup";
 import ApplePaymentPopup from "@/components/modals/applePaymentPopup";
+import KotanipayPayPopup from "@/components/modals/kotaniPayPopup";
 import HistoryPopup from "@/components/modals/HistoryPopup";
 import animationData from "./taptoPay.json";
 import LottieComponent from "./TaptoPayanimation";
@@ -20,6 +21,8 @@ import {
   getCurrencyList,
   walletBal,
   getUserByWallet,
+  getKotanipayRate,
+  getKotanipayOnramp,
   payInvoice,
 } from "../../services/apiService";
 import { filterHexInput } from "../../utils/helper";
@@ -31,9 +34,14 @@ const Tpos = () => {
   const [amount, setAmount] = useState("");
   const [dollarAmount, setDollarAmount] = useState("");
   const [memo, setMemo] = useState("");
+  const [number, setNumber] = useState("");
+  const [finalNumber, setFinalNumber] = useState("");
   const [tab, setTab] = useState(0);
   const [paymentPop, setPaymentPop] = useState(false);
   const [applePaymentPop, setApplePaymentPop] = useState(false);
+  const [katoniPaymentPop, setKatoniPaymentPop] = useState(false);
+  const [referenceId, setReferenceId] = useState("");
+  // KotanipayPayPopup
   const [historyPop, setHistoryPop] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const [email, setEmail] = useState("");
@@ -84,7 +92,7 @@ const Tpos = () => {
 
   const [sats, setSats] = useState(null);
   const [currencyValue, setCurrencyValue] = useState(0);
-
+  const [kesValue, setKesValue] = useState(0);
   useEffect(() => {
     if (paymentSuccess) {
       // console.log("api hit-->");
@@ -98,6 +106,22 @@ const Tpos = () => {
     }
 
     const currencyCode = selectedCountryData["Currency id"].toLowerCase(); // Convert to lowercase for priceList lookup
+    const exchangeRate = priceList[currencyCode];
+
+    if (!exchangeRate) {
+      console.warn(`Exchange rate not found for currency: ${currencyCode}`);
+      return usdAmount; // Return original USD amount if rate not found
+    }
+
+    const convertedAmount = usdAmount * exchangeRate;
+    return convertedAmount;
+  };
+  const convertUSDToKes = (usdAmount, priceList) => {
+    if (!priceList || !usdAmount) {
+      return 0;
+    }
+
+    const currencyCode = "kes"; // Convert to lowercase for priceList lookup
     const exchangeRate = priceList[currencyCode];
 
     if (!exchangeRate) {
@@ -142,11 +166,13 @@ const Tpos = () => {
         selectedCountryData,
         priceList
       );
+      const convertedKesValue = convertUSDToKes(selectedUsdAmount, priceList);
       setCurrencyValue(
         parseFloat(convertedValue) < 0.01
           ? "0"
           : parseFloat(convertedValue).toFixed(2)
       );
+      setKesValue(parseFloat(convertedKesValue).toFixed(2));
     }
   }, [selectedUsdAmount, selectedCountryData, priceList]);
 
@@ -364,7 +390,10 @@ const Tpos = () => {
         selectedCountryData,
         priceList
       );
+      const convertedKesValue = convertUSDToKes(finalAmount, priceList);
+
       setCurrencyValue(convertedValue);
+      setKesValue(convertedKesValue);
     }
     // Set active index for black background flash
     setActiveIndex(digit);
@@ -409,6 +438,7 @@ const Tpos = () => {
   const handleClear = () => {
     setAmount("");
     setCurrencyValue(0);
+    setKesValue(0);
     setSelectedUsdAmount(0);
     setActiveIndex("clear");
     setTimeout(() => {
@@ -428,21 +458,39 @@ const Tpos = () => {
   //   setMemo(e.target.value);
   // };
 
-  const handleMemoChange = (e) => {
+  const handleNumberChange = (e) => {
     const value = e.target.value;
+    // Keep only digits
+    let digits = value.replace(/\D/g, "");
 
-    // const filteredValue = value.replace(/[^0-9a-fA-Fx]/g, "");
-    // Filter out invalid characters instead of blocking the entire input
-    const filteredValue = filterHexInput(value, /[^a-zA-Z0-9 ]/g, 100);
-    // console.log("line-127", filteredValue.length);
+    // Remove leading 0 or 254 if user tries typing them
+    if (digits.startsWith("254")) {
+      digits = digits.slice(3);
+    } else if (digits.startsWith("0")) {
+      digits = digits.slice(1);
+    }
 
-    // Update the address value with filtered input
-    setMemo(filteredValue);
+    // Enforce max 9 digits
+    if (digits.length > 9) {
+      digits = digits.slice(0, 9);
+    }
+
+    // Always prepend +254
+    const formatted = "+254" + digits;
+    setFinalNumber(formatted);
+    setNumber(digits);
+    // // const filteredValue = value.replace(/[^0-9a-fA-Fx]/g, "");
+    // // Filter out invalid characters instead of blocking the entire input
+    // const filteredValue = filterHexInput(value, /[^a-zA-Z0-9 ]/g, 100);
+    // // console.log("line-127", filteredValue.length);
+
+    // // Update the address value with filtered input
+    // setMemo(filteredValue);
   };
 
   const tabData = [
-    // { title: "Mobile Money", component: "" },
-    { title: "Debit Card", component: "" },
+    { title: "Debit", component: "" },
+    { title: "Mobile Money", component: "" },
   ];
 
   const handleTab = (key) => {
@@ -520,6 +568,47 @@ const Tpos = () => {
     }
   };
 
+  const createKatonipayInvoice = async () => {
+    if (!amount || parseInt(amount) <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    } else if (!kesValue || parseFloat(kesValue) < 1) {
+      setError("Amount must be at least 1 KES");
+      return;
+    } else if (!finalNumber || finalNumber.length < 13) {
+      setError("Please enter a valid phone number");
+      return;
+    } else if (!walletAddress || walletAddress.length < 10) {
+      setError("Wallet address is missing or invalid");
+      return;
+    }
+
+    setError("");
+    setLoading(true); // Start loader
+    let rateData = await getKotanipayRate(kesValue);
+    // console.log("rateData-->", rateData);
+    if (!rateData.status) {
+      setError("Failed to get rate. Please try again.");
+      setLoading(false);
+      return;
+    }
+    // console.log("walletAddress-->", walletAddress);
+    let onRampData = await getKotanipayOnramp(
+      kesValue,
+      finalNumber,
+      rateData.data.id,
+      walletAddress
+    );
+    // console.log("onRampData-->", onRampData);
+    if (!onRampData.status) {
+      setError("Failed to create Kotanipay onramp. Please try again.");
+      setLoading(false);
+      return;
+    }
+    setReferenceId(onRampData.data.referenceId);
+    setKatoniPaymentPop(true);
+    setLoading(false);
+  };
   const createAppleInvoiceAndShowQR = async () => {
     if (!amount || parseInt(amount) <= 0) {
       setError("Please enter a valid amount");
@@ -592,12 +681,11 @@ const Tpos = () => {
   const handleOkClick = () => {
     if (tab === 0) {
       // Qr Code to Pay tab
-      // createInvoiceAndShowQR();
       createAppleInvoiceAndShowQR();
     } else {
       // Tap to Pay tab - start Ethereum tap to pay
       // startTapToPay();
-      // createAppleInvoiceAndShowQR();
+      createKatonipayInvoice();
     }
 
     setActiveIndex("ok");
@@ -685,6 +773,16 @@ const Tpos = () => {
           />,
           document.body
         )}
+      {katoniPaymentPop &&
+        createPortal(
+          <KotanipayPayPopup
+            katoniPaymentPop={katoniPaymentPop}
+            setKatoniPaymentPop={setKatoniPaymentPop}
+            referenceId={referenceId}
+          />,
+          document.body
+        )}
+
       {historyPop &&
         createPortal(
           <HistoryPopup
@@ -760,12 +858,16 @@ const Tpos = () => {
                   {/* <p className="mb-0 mt-4 font-medium text-[20px]">
                     {sats} sat
                   </p> */}
-                  {selectedCountryData && (
+                  {(tab == 0 && selectedCountryData && (
                     <p className="mb-0 mt-4 font-medium text-[20px]">
                       {currencyValue}{" "}
                       {selectedCountryData
                         ? selectedCountryData["Currency id"]
                         : ""}
+                    </p>
+                  )) || (
+                    <p className="mb-0 mt-4 font-medium text-[20px]">
+                      {kesValue} KES
                     </p>
                   )}
                   {error && (
@@ -796,23 +898,39 @@ const Tpos = () => {
                       onChange={handleMemoChange}
                       className="border-[#8c8c8c] bg-[#fff] text-black flex text-[14px] font-semibold w-full border-px md:border-hpx px-5 py-2 h-12 rounded-full outline-0"
                     /> */}
-                    <select
-                      value={selectedCountry}
-                      onChange={handleCountryChange}
-                      className="border-[#8c8c8c] bg-[#fff] text-black flex text-[14px] font-semibold w-full border-px md:border-hpx px-5 py-2 h-12 rounded-full outline-0 appearance-none cursor-pointer"
-                    >
-                      <option value="" disabled>
-                        Select a country
-                      </option>
-                      {currencyData.map((item) => (
-                        <option
-                          key={item["Country id"]}
-                          value={item["Country id"]}
-                        >
-                          {item.country} ({item["Currency id"]})
+                    {tab == 0 && (
+                      <select
+                        value={selectedCountry}
+                        onChange={handleCountryChange}
+                        className="border-[#8c8c8c] bg-[#fff] text-black flex text-[14px] font-semibold w-full border-px md:border-hpx px-5 py-2 h-12 rounded-full outline-0 appearance-none cursor-pointer"
+                      >
+                        <option value="" disabled>
+                          Select a country
                         </option>
-                      ))}
-                    </select>
+                        {currencyData.map((item) => (
+                          <option
+                            key={item["Country id"]}
+                            value={item["Country id"]}
+                          >
+                            {item.country} ({item["Currency id"]})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {tab == 1 && (
+                      <div className="relative">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-black text-[14px] font-semibold pointer-events-none">
+                          +254
+                        </span>
+                        <input
+                          placeholder="Enter Phone Number"
+                          type="text"
+                          value={number}
+                          onChange={handleNumberChange}
+                          className="border-[#8c8c8c] bg-[#fff] text-black flex text-[14px] font-semibold w-full border-px md:border-hpx pl-16 py-2 h-12 rounded-full outline-0"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="keyPad w-full grid gap-2 grid-cols-4 grid-rows-4 min-h-[40vh] p-3 max-w-[600px] mx-auto">

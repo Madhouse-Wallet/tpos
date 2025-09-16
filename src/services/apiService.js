@@ -33,7 +33,12 @@ export const createTposInvoice = async (
   }
 };
 
-export const createAppleInvoice = async (amount, address, currency, country) => {
+export const createAppleInvoice = async (
+  amount,
+  address,
+  currency,
+  country
+) => {
   try {
     try {
       return await fetch(`/api/createAppleInvoice`, {
@@ -228,6 +233,59 @@ export const fundTrnsfer = async (walletId, tpoId) => {
   }
 };
 
+//getKotanipayRate
+export const getKotanipayRate = async (amount) => {
+  try {
+    try {
+      return await fetch(`/api/kotanipayRate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fiatAmount: amount,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("data-->", data);
+          return { status: true, data: data.data };
+        });
+    } catch (error) {
+      console.log(error);
+      return { status: false, error: data.error };
+    }
+  } catch (error) {
+    console.log("sendBtc error-->", error);
+    return { status: false, error: data.error };
+  }
+};
+
+export const getKotanipayOnramp = async (amount, number, rateId, address) => {
+  try {
+    try {
+      return await fetch(`/api/kotanipayOnramp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phoneNumber: number,
+          fiatAmount: amount,
+          rateId,
+          address,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("data-->", data);
+          return { status: true, data: data.data };
+        });
+    } catch (error) {
+      console.log(error);
+      return { status: false, error: data.error };
+    }
+  } catch (error) {
+    console.log("sendBtc error-->", error);
+    return { status: false, error: data.error };
+  }
+};
 export const walletBal = async (
   lnbitLinkId_2,
   lnbitLinkId,
