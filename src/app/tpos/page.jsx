@@ -442,7 +442,7 @@ const Tpos = () => {
   };
 
   const tabData = [
-    { title: "Debit Card", component: "" },
+    { title: "Debit", component: "" },
     { title: "Mobile Money", component: "" },
     
   ];
