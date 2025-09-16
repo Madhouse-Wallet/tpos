@@ -442,8 +442,9 @@ const Tpos = () => {
   };
 
   const tabData = [
-    { title: "Mobile Money", component: "" },
     { title: "Debit Card", component: "" },
+    { title: "Mobile Money", component: "" },
+    
   ];
 
   const handleTab = (key) => {
@@ -593,7 +594,7 @@ const Tpos = () => {
   const handleOkClick = () => {
     if (tab === 0) {
       // Qr Code to Pay tab
-      createInvoiceAndShowQR();
+      createAppleInvoiceAndShowQR();
     } else {
       // Tap to Pay tab - start Ethereum tap to pay
       // startTapToPay();
