@@ -247,15 +247,15 @@ export const getKotanipayRate = async (amount) => {
         .then((res) => res.json())
         .then((data) => {
           console.log("data-->", data);
-          return { status: true, data: data.data };
+          return data;
         });
     } catch (error) {
       console.log(error);
-      return { status: false, error: data.error };
+      return { status: "failure", error: data.error };
     }
   } catch (error) {
     console.log("sendBtc error-->", error);
-    return { status: false, error: data.error };
+    return { status: "failure", error: data.error };
   }
 };
 
@@ -275,15 +275,15 @@ export const getKotanipayOnramp = async (amount, number, rateId, address) => {
         .then((res) => res.json())
         .then((data) => {
           console.log("data-->", data);
-          return { status: true, data: data.data };
+          return data;
         });
     } catch (error) {
       console.log(error);
-      return { status: false, error: data.error };
+      return { status: "failure", error: data.error };
     }
   } catch (error) {
     console.log("sendBtc error-->", error);
-    return { status: false, error: data.error };
+    return { status: "failure", error: data.error };
   }
 };
 export const walletBal = async (

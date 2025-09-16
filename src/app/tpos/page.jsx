@@ -587,7 +587,7 @@ const Tpos = () => {
     setLoading(true); // Start loader
     let rateData = await getKotanipayRate(kesValue);
     // console.log("rateData-->", rateData);
-    if (!rateData.status) {
+    if ( rateData.status == "failure") {
       setError("Failed to get rate. Please try again.");
       setLoading(false);
       return;
@@ -600,7 +600,7 @@ const Tpos = () => {
       walletAddress
     );
     // console.log("onRampData-->", onRampData);
-    if (!onRampData.status) {
+    if (onRampData.status == "failure") {
       setError("Failed to create Kotanipay onramp. Please try again.");
       setLoading(false);
       return;
