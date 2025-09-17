@@ -679,7 +679,10 @@ const Tpos = () => {
 
   // Handler for OK button click
   const handleOkClick = () => {
-    if (tab === 0) {
+    console.log("handleOkClick-->",walletAddress);
+    if(!walletAddress){
+      setError("Please Login to continue");
+    }else if (tab === 0) {
       // Qr Code to Pay tab
       createAppleInvoiceAndShowQR();
     } else {
