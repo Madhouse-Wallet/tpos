@@ -121,7 +121,7 @@ const ApplePaymentPopup = ({
                     {/* <span className="text-xs">(+ 1 tip)</span> */}
                   </h4>
                   <p className="m-0 text-[#838383] text-xs">
-                    {memo ? memo : "TPOS Madhouse Wallet"}
+                    {memo ? memo : "This link can only be used once. It must be emailed or scanned, not texted."}
                   </p>
                   <div className="mt-3">
                     <button
