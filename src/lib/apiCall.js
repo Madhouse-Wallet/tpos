@@ -24,7 +24,7 @@ export const lambdaInvokeFunction = async (payload, FUNCTION_NAME) => {
     if (response.LogResult) {
       // console.log("Lambda logs:", Buffer.from(response.LogResult, "base64").toString("ascii"));
     }
-    console.log("result", JSON.parse(result));
+    // console.log("result", JSON.parse(result));
     // return JSON.parse(result);
     const parsed = JSON.parse(result);
     if (parsed.body) {

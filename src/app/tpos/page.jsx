@@ -587,7 +587,7 @@ const Tpos = () => {
     setLoading(true); // Start loader
     let rateData = await getKotanipayRate(kesValue);
     // console.log("rateData-->", rateData);
-    if ( rateData.status == "failure") {
+    if (rateData.status == "failure") {
       setError("Failed to get rate. Please try again.");
       setLoading(false);
       return;
@@ -605,9 +605,22 @@ const Tpos = () => {
       setLoading(false);
       return;
     }
+    const userRes = await lambdaInvokeFunction(
+      {
+        userId: user._id,
+        userWallet: user.wallet,
+        userEmail: user.email,
+        kotanipayRate: rateData.data,
+        kotanipayOnramp: { ...onRampData.data, phoneNumber: finalNumber },
+      },
+      "madhouse-backend-production-addMobileMoneyData"
+    );
     setReferenceId(onRampData.data.referenceId);
     setKatoniPaymentPop(true);
     setLoading(false);
+    handleClear();
+    setFinalNumber("");
+    setNumber("");
   };
   const createAppleInvoiceAndShowQR = async () => {
     if (!amount || parseInt(amount) <= 0) {
@@ -679,10 +692,10 @@ const Tpos = () => {
 
   // Handler for OK button click
   const handleOkClick = () => {
-    console.log("handleOkClick-->",walletAddress);
-    if(!walletAddress){
+    // console.log("handleOkClick-->", walletAddress);
+    if (!walletAddress) {
       setError("Please Login to continue");
-    }else if (tab === 0) {
+    } else if (tab === 0) {
       // Qr Code to Pay tab
       createAppleInvoiceAndShowQR();
     } else {

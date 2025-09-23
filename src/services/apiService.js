@@ -246,7 +246,7 @@ export const getKotanipayRate = async (amount) => {
       })
         .then((res) => res.json())
         .then((data) => {
-          console.log("data-->", data);
+          // console.log("data-->", data);
           return data;
         });
     } catch (error) {
@@ -274,7 +274,7 @@ export const getKotanipayOnramp = async (amount, number, rateId, address) => {
       })
         .then((res) => res.json())
         .then((data) => {
-          console.log("data-->", data);
+          // console.log("data-->", data);
           return data;
         });
     } catch (error) {

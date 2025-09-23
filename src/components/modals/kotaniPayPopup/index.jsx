@@ -14,7 +14,7 @@ const KotanipayPayPopup = ({
   setKatoniPaymentPop,
   referenceId,
 }) => {
-  console.log("referenceId", referenceId);
+  // console.log("referenceId", referenceId);
   const [copied, setCopied] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const socketRef = useRef(null);
