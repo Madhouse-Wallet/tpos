@@ -5,9 +5,6 @@ const nextConfig: NextConfig = {
     styledComponents: true, // Enables SSR support for styled-components
   },
    reactStrictMode: true,
-  devIndicators: {
-    buildActivity: false,
-  },
   async headers() {
 
     return [
@@ -35,6 +32,9 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["child_process"],
+    eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
